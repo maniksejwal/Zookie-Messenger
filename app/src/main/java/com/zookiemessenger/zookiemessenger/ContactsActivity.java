@@ -2,6 +2,7 @@ package com.zookiemessenger.zookiemessenger;
 
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -9,12 +10,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.ContactsContract;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -31,7 +36,7 @@ public class ContactsActivity extends AppCompatActivity {
     private ListView mListView;
     private ProgressDialog pDialog;
     private Handler updateBarHandler;
-    ArrayList<String> contactList;
+    ArrayList<Contact> contactList;
     Cursor cursor;
     int counter;
 
@@ -44,7 +49,7 @@ public class ContactsActivity extends AppCompatActivity {
         pDialog.setCancelable(false);
         pDialog.show();
         Timber.d("ListViewID" + findViewById(R.id.list).getId());
-        mListView = (ListView) findViewById(R.id.list);
+        mListView = findViewById(R.id.list);
         updateBarHandler = new Handler();
         // Since reading contacts takes more time, let's run it on a separate thread.
         new Thread(new Runnable() {
@@ -53,7 +58,7 @@ public class ContactsActivity extends AppCompatActivity {
                 getContacts();
             }
         }).start();
-        // Set onclicklistener to the list item.
+        // Set onClickListener to the list item.
         mListView.setOnItemClickListener(new OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
@@ -108,14 +113,13 @@ public class ContactsActivity extends AppCompatActivity {
         //Uri EmailCONTENT_URI = ContactsContract.CommonDataKinds.Email.CONTENT_URI;
         //String EmailCONTACT_ID = ContactsContract.CommonDataKinds.Email.CONTACT_ID;
         //String DATA = ContactsContract.CommonDataKinds.Email.DATA;
-        StringBuffer output;
         ContentResolver contentResolver = getContentResolver();
         cursor = contentResolver.query(CONTENT_URI, null, null, null, null);
         // Iterate every contact in the phone
         if (cursor == null || cursor.getCount() <= 0) return;
         counter = 0;
         while (cursor.moveToNext()) {
-            output = new StringBuffer();
+            Contact contact = new Contact();
             // Update the progress message
             updateBarHandler.post(new Runnable() {
                 public void run() {
@@ -125,58 +129,27 @@ public class ContactsActivity extends AppCompatActivity {
             String contact_id = cursor.getString(cursor.getColumnIndex(_ID));
             String name = cursor.getString(cursor.getColumnIndex(DISPLAY_NAME));
             int hasPhoneNumber = Integer.parseInt(cursor.getString(cursor.getColumnIndex(HAS_PHONE_NUMBER)));
-            if (hasPhoneNumber > 0) {
-                output.append("\n First Name:").append(name);
-                //This is to read multiple phone numbers associated with the same contact
-                Cursor phoneCursor = contentResolver.query(PhoneCONTENT_URI, null, Phone_CONTACT_ID + " = ?", new String[]{contact_id}, null);
-                if (phoneCursor != null) {
-                    while (phoneCursor.moveToNext()) {
-                        phoneNumber = phoneCursor.getString(phoneCursor.getColumnIndex(NUMBER));
-                        output.append("\n Phone number:").append(phoneNumber);
-                    }
-                }
-                if (phoneCursor != null) {
-                    phoneCursor.close();
-                }
-                // Read every email id associated with the contact
-                /*Cursor emailCursor = contentResolver.query(EmailCONTENT_URI, null, EmailCONTACT_ID + " = ?", new String[]{contact_id}, null);
-                while (emailCursor.moveToNext()) {
-                    email = emailCursor.getString(emailCursor.getColumnIndex(DATA));
-                    output.append("\n Email:" + email);
-                }
-                emailCursor.close();
+            if (hasPhoneNumber <= 0) continue;
 
-                String columns[] = {
-                        ContactsContract.CommonDataKinds.Event.START_DATE,
-                        ContactsContract.CommonDataKinds.Event.TYPE,
-                        ContactsContract.CommonDataKinds.Event.MIMETYPE,
-                };
-                String where = ContactsContract.CommonDataKinds.Event.TYPE + "=" + ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY +
-                        " and " + ContactsContract.CommonDataKinds.Event.MIMETYPE + " = '" + ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE + "' and " + ContactsContract.Data.CONTACT_ID + " = " + contact_id;
-                String[] selectionArgs = null;
-                String sortOrder = ContactsContract.Contacts.DISPLAY_NAME;
+            //This is to read multiple phone numbers associated with the same contact
+            Cursor phoneCursor = contentResolver.query(PhoneCONTENT_URI, null, Phone_CONTACT_ID + " = ?", new String[]{contact_id}, null);
+            if (phoneCursor == null) continue;
 
-                Cursor birthdayCur = contentResolver.query(ContactsContract.Data.CONTENT_URI, columns, where, selectionArgs, sortOrder);
-                Log.d("BDAY", birthdayCur.getCount() + "");
-                if (birthdayCur.getCount() > 0) {
-                    while (birthdayCur.moveToNext()) {
-                        String birthday = birthdayCur.getString(birthdayCur.getColumnIndex(ContactsContract.CommonDataKinds.Event.START_DATE));
-                        output.append("Birthday :" + birthday);
-                        Log.d("BDAY", birthday);
-                    }
-                }
-                birthdayCur.close();
-                */
+            while (phoneCursor.moveToNext()) {
+                phoneNumber = phoneCursor.getString(phoneCursor.getColumnIndex(NUMBER));
+                Timber.v("name " + name + " phoneNumber " + phoneNumber);
+                contact.phoneNumber = phoneNumber;
+                contact.name = name;
+                // Add the contact to the ArrayList
+                contactList.add(contact);
             }
-            // Add the contact to the ArrayList
-            contactList.add(output.toString());
+            phoneCursor.close();
         }
         // ListView has to be updated using a ui thread
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                        getApplicationContext(), R.layout.list_item, R.id.text1, contactList);
+                ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
                 mListView.setAdapter(adapter);
             }
         });
@@ -187,5 +160,41 @@ public class ContactsActivity extends AppCompatActivity {
                 pDialog.cancel();
             }
         }, 500);
+    }
+
+    private class Contact {
+        String name, phoneNumber;
+    }
+
+    private class ContactAdapter extends ArrayAdapter<Contact> {
+
+        ContactAdapter(@NonNull Context context, ArrayList<Contact> contacts) {
+            super(context, 0, contacts);
+            Timber.v("ContactAdapter created");
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View listItemView = convertView;
+            if (listItemView == null) {
+                listItemView = LayoutInflater.from(getContext()).inflate(R.layout.contacts_list_item
+                        , parent, false);
+            }
+
+            ((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).name);
+            ((TextView) listItemView.findViewById(R.id.phone_number)).setText(getItem(position).phoneNumber);
+            /*ImageView img = listItemView.findViewById(R.id.image);
+            Picasso
+                    .with(getApplicationContext())
+                    .load(getItem(position).mImageId)
+                    .placeholder(R.mipmap.launcher_ic)
+                    .fit()
+                    .centerCrop()
+                    //.centerInside()                 // or .centerCrop() to avoid a stretched imageÒ
+                    .into(img);
+                    */
+
+            return listItemView;
+        }
     }
 }
