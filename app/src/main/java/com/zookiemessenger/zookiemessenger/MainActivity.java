@@ -134,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //     verified without needing to send or enter a verification code.
                 // 2 - Auto-retrieval. On some devices Google Play services can automatically
                 //     detect the incoming verification SMS and perform verificaiton without
-                //     user action.
+                //     mFirebaseUser action.
                 Timber.d("onVerificationCompleted:" + credential);
                 // [START_EXCLUDE silent]
                 mVerificationInProgress = false;
@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void onCodeSent(String verificationId,
                                    PhoneAuthProvider.ForceResendingToken token) {
                 // The SMS verification code has been sent to the provided phone number, we
-                // now need to ask the user to enter the code and then construct a credential
+                // now need to ask the mFirebaseUser to enter the code and then construct a credential
                 // by combining the code with a verification ID.
                 Log.d(TAG, "onCodeSent:" + verificationId);
 
@@ -200,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onStart() {
         super.onStart();
-        // Check if user is signed in (non-null) and update UI accordingly.
+        // Check if mFirebaseUser is signed in (non-null) and update UI accordingly.
         FirebaseUser currentUser = mAuth.getCurrentUser();
         updateUI(currentUser);
 
@@ -269,15 +269,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
+                            // Sign in success, update UI with the signed-in mFirebaseUser's information
                             Timber.d("signInWithCredential:success");
                             FirebaseUser user = task.getResult().getUser();
                             UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest
                                     .Builder().setDisplayName(mNameField.getText().toString()).build();
                             user.updateProfile(profileUpdates);
+                            //boolean isNewUser = mFirebaseUser.
                             Timber.v(user.getDisplayName());
                             // [START_EXCLUDE]
-                            //updateUI(STATE_SIGNIN_SUCCESS, user);
+                            //updateUI(STATE_SIGNIN_SUCCESS, mFirebaseUser);
                             Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
                             i.putExtra("name", mNameField.getText().toString());
                             //i.putExtra(FRIEND_LIST, result);
@@ -375,7 +376,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                       //      .setDisplayName(mNameField
                         //            .getText().toString()).build();
-                    //user.updateProfile(profileUpdates);
+                    //mFirebaseUser.updateProfile(profileUpdates);
                     user.reload();
                     Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
                     //i.putExtra(FRIEND_LIST, result);
@@ -384,7 +385,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     // Np-op, handled by sign-in check
                     break;
                 } else {
-                    Timber.e("updateUI() case STATE_SIGN_SUCCESS user is null");
+                    Timber.e("updateUI() case STATE_SIGN_SUCCESS mFirebaseUser is null");
                 }
         }
 

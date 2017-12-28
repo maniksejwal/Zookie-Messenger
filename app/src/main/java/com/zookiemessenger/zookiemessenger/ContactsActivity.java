@@ -1,18 +1,15 @@
 package com.zookiemessenger.zookiemessenger;
 
 import android.app.ProgressDialog;
-import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -30,9 +27,8 @@ import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import com.zookiemessenger.zookiemessenger.Old.tools.FriendController;
-import com.zookiemessenger.zookiemessenger.Old.types.FriendInfo;
 
 import java.util.ArrayList;
 
@@ -49,23 +45,26 @@ public class ContactsActivity extends AppCompatActivity {
     private ProgressDialog pDialog;
     private Handler updateBarHandler;
     private static final int LOG_OUT_ID = Menu.FIRST;
-    public String ownUsername = "";
     ArrayList<Contact> contactList;
     Cursor cursor;
     int counter;
-    FirebaseUser user;
+
+    FirebaseUser mFirebaseUser;
+    FirebaseDatabase mFirebaseDatabase;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contacts);
-        user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
+
+        mFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        mFirebaseDatabase = FirebaseDatabase.getInstance();
+
+
+        if (mFirebaseUser == null) {
             finish();
             return;
         }
-        user.reload();
-        setTitle(user.getDisplayName() + "'s contacts");
         pDialog = new ProgressDialog(this);
         pDialog.setMessage("Reading contacts...");
         pDialog.setCancelable(false);
@@ -89,6 +88,8 @@ public class ContactsActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "item clicked : \n" + contactList.get(position), Toast.LENGTH_SHORT).show();
             }
         });
+        mFirebaseUser.reload();
+        setTitle(mFirebaseUser.getDisplayName() + "'s contacts");
     }
 
     private boolean mayRequestContacts() {
@@ -194,32 +195,6 @@ public class ContactsActivity extends AppCompatActivity {
             }
         }, 500);
     }
-
-    private ServiceConnection mConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            //imService = ((IMService.IMBinder) service).getService();
-
-            FriendInfo[] friends = FriendController.getFriendsInfo(); //imService.getLastRawFriendList();
-            if (friends != null) {
-                // parseFriendInfo(friendList);
-                //getApplicationContext().updateData(friends, null);
-            }
-            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            if (user != null) {
-                if (user.getDisplayName() == null || user.getDisplayName().equals(""))
-                    Timber.e("Username is null in FriendsListActivity.onServiceConnected()");
-                Timber.d(user.getDisplayName());
-                setTitle(user.getDisplayName() + "'s contacts");
-                ownUsername = user.getDisplayName();
-            } else throw new RuntimeException("User is null in ContactsActivity");
-        }
-
-        public void onServiceDisconnected(ComponentName className) {
-            //imService = null;
-            Toast.makeText(getApplicationContext(), R.string.local_service_stopped,
-                    Toast.LENGTH_SHORT).show();
-        }
-    };
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
