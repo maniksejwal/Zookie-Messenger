@@ -29,10 +29,16 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import timber.log.Timber;
+
+import static android.telephony.PhoneNumberUtils.formatNumber;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -47,9 +53,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final int STATE_SIGNIN_FAILED = 5;
     private static final int STATE_SIGNIN_SUCCESS = 6;
 
-    // [START declare_auth]
     private FirebaseAuth mAuth;
-    // [END declare_auth]
+    private FirebaseDatabase mFirebaseDatabase;
+
+    private DatabaseReference mUserDatabaseReference;
 
     private boolean mVerificationInProgress = false;
     private String mVerificationId;
@@ -71,6 +78,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button mResendButton;
     private Button mSignOutButton;
 
+    FirebaseMultiQuery firebaseMultiQuery;
+    FirebaseUser mUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,6 +130,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // [START initialize_auth]
         mAuth = FirebaseAuth.getInstance();
+        mFirebaseDatabase = FirebaseDatabase.getInstance();
+        mUserDatabaseReference = mFirebaseDatabase.getReference().child("user");
+
         // [END initialize_auth]
 
         // Initialize phone auth callbacks
@@ -209,8 +221,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             startPhoneNumberVerification(mPhoneNumberField.getText().toString());
         }
         // [END_EXCLUDE]
+
+
     }
     // [END on_start_check_user]
+
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (firebaseMultiQuery != null) firebaseMultiQuery.stop();
+    }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -271,19 +292,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in mFirebaseUser's information
                             Timber.d("signInWithCredential:success");
-                            FirebaseUser user = task.getResult().getUser();
+                            mUser = task.getResult().getUser();
                             UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest
                                     .Builder().setDisplayName(mNameField.getText().toString()).build();
-                            user.updateProfile(profileUpdates);
-                            //boolean isNewUser = mFirebaseUser.
-                            Timber.v(user.getDisplayName());
-                            // [START_EXCLUDE]
-                            //updateUI(STATE_SIGNIN_SUCCESS, mFirebaseUser);
+                            mUser.updateProfile(profileUpdates);
+
+
+                            //firebaseMultiQuery = new FirebaseMultiQuery(mUserDatabaseReference);
+                            //final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
+                            //allLoad.addOnCompleteListener(MainActivity.this, new AllOnCompleteListener());
+
+                            String phoneNumber = formatNumber(((TextView) mPhoneNumberField).getText().toString());
+
+                            Map<String, Object> childUpdates = new HashMap<>();
+                            childUpdates.put("displayName", mNameField.getText().toString());
+                            childUpdates.put("uid", mUser.getUid());
+                            mUserDatabaseReference.child(phoneNumber).updateChildren(childUpdates);
+
+
                             Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
-                            i.putExtra("name", mNameField.getText().toString());
+                            i.putExtra("displayName", mNameField.getText().toString());
                             //i.putExtra(FRIEND_LIST, result);
                             startActivity(i);
                             MainActivity.this.finish();
+
+
+                            //boolean isNewUser = mFirebaseUser.
+
                             // [END_EXCLUDE]
                         } else {
                             // Sign in failed, display a message and update the UI
@@ -354,7 +389,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 disableViews(mStartButton, mVerifyButton, mResendButton, mPhoneNumberField,
                         mVerificationField);
                 mDetailText.setText(R.string.status_verification_succeeded);
-                //TODO:get name etc here, get contacts here, etc.
+                //TODO:get displayName etc here, get contacts here, etc.
                 // Set the verification text based on the credential
                 if (cred != null) {
                     if (cred.getSmsCode() != null) {
@@ -374,8 +409,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 if (user != null) {
                     //UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                      //      .setDisplayName(mNameField
-                        //            .getText().toString()).build();
+                    //      .setDisplayName(mNameField
+                    //            .getText().toString()).build();
                     //mFirebaseUser.updateProfile(profileUpdates);
                     user.reload();
                     Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
@@ -416,7 +451,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return false;
         }
         if (TextUtils.isEmpty(mNameField.getText().toString())) {
-            mNameField.setError("Your name please");
+            mNameField.setError("Your displayName please");
         }
 
         return true;
@@ -460,14 +495,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /*private class AllOnCompleteListener implements OnCompleteListener<Map<DatabaseReference, DataSnapshot>> {
+        @Override
+        public void onComplete(@NonNull Task<Map<DatabaseReference, DataSnapshot>> task) {
+            if (task.isSuccessful()) {
+                final Map<DatabaseReference, DataSnapshot> result = task.getResult();
+                // Look up DataSnapshot objects using the same DatabaseReferences you passed into FirebaseMultiQuery
+            } else {
+                if (task.getException() != null)
+                    task.getException().printStackTrace();
+                // log the error or whatever you need to do
+            }
+            // Do stuff with views
+            //Timber.v(user.getDisplayName());
+            // [START_EXCLUDE]
+            //updateUI(STATE_SIGNIN_SUCCESS, mFirebaseUser);
+
+        }
+    }*/
+
 }
-
-/*public class MainActivity extends AppCompatActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-    }
-}*/
-

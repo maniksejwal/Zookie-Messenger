@@ -23,14 +23,19 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 import timber.log.Timber;
 
@@ -45,12 +50,17 @@ public class ContactsActivity extends AppCompatActivity {
     private ProgressDialog pDialog;
     private Handler updateBarHandler;
     private static final int LOG_OUT_ID = Menu.FIRST;
-    ArrayList<Contact> contactList;
+    ArrayList<Contact> contactList = new ArrayList<>();
     Cursor cursor;
     int counter;
 
     FirebaseUser mFirebaseUser;
     FirebaseDatabase mFirebaseDatabase;
+    DatabaseReference mUserDatabaseReference;
+
+    FirebaseMultiQuery firebaseMultiQuery;
+    Cursor mPhoneCursor;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -60,6 +70,7 @@ public class ContactsActivity extends AppCompatActivity {
         mFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         mFirebaseDatabase = FirebaseDatabase.getInstance();
 
+        mUserDatabaseReference = mFirebaseDatabase.getReference();
 
         if (mFirebaseUser == null) {
             finish();
@@ -79,16 +90,17 @@ public class ContactsActivity extends AppCompatActivity {
                 getContacts();
             }
         }).start();
+
         // Set onClickListener to the list item.
         mListView.setOnItemClickListener(new OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
                 //TODO Do whatever you want with the list data
-                Toast.makeText(getApplicationContext(), "item clicked : \n" + contactList.get(position), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(), "item clicked : \n" + contactList.get(position), Toast.LENGTH_SHORT).show();
             }
         });
-        mFirebaseUser.reload();
+//        mFirebaseUser.reload();
         setTitle(mFirebaseUser.getDisplayName() + "'s contacts");
     }
 
@@ -115,7 +127,8 @@ public class ContactsActivity extends AppCompatActivity {
                                            int[] grantResults) {
         if (requestCode == REQUEST_READ_CONTACTS) {
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getContacts();
+
+
             }
         }
     }
@@ -124,7 +137,11 @@ public class ContactsActivity extends AppCompatActivity {
         if (!mayRequestContacts()) {
             return;
         }
-        contactList = new ArrayList<>();
+
+        firebaseMultiQuery = new FirebaseMultiQuery(mUserDatabaseReference);
+        final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
+        allLoad.addOnCompleteListener(this, new AllOnCompleteListener());
+
         String phoneNumber;
         Uri CONTENT_URI = ContactsContract.Contacts.CONTENT_URI;
         String _ID = ContactsContract.Contacts._ID;
@@ -133,6 +150,9 @@ public class ContactsActivity extends AppCompatActivity {
         Uri PhoneCONTENT_URI = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
         String Phone_CONTACT_ID = ContactsContract.CommonDataKinds.Phone.CONTACT_ID;
         String NUMBER = ContactsContract.CommonDataKinds.Phone.NUMBER;
+
+        counter = 0;
+
         //Uri EmailCONTENT_URI = ContactsContract.CommonDataKinds.Email.CONTENT_URI;
         //String EmailCONTACT_ID = ContactsContract.CommonDataKinds.Email.CONTACT_ID;
         //String DATA = ContactsContract.CommonDataKinds.Email.DATA;
@@ -140,46 +160,67 @@ public class ContactsActivity extends AppCompatActivity {
         cursor = contentResolver.query(CONTENT_URI, null, null, null, null);
         // Iterate every contact in the phone
         if (cursor == null || cursor.getCount() <= 0) return;
-        counter = 0;
-        String previous = "";
-        PhoneNumberUtil pnu = PhoneNumberUtil.getInstance();
 
         while (cursor.moveToNext()) {
-            Contact contact = new Contact();
+            final Contact contact = new Contact();
             // Update the progress message
             updateBarHandler.post(new Runnable() {
                 public void run() {
                     pDialog.setMessage("Reading contacts : " + counter++ + "/" + cursor.getCount());
                 }
             });
-            String contact_id = cursor.getString(cursor.getColumnIndex(_ID));
-            String name = cursor.getString(cursor.getColumnIndex(DISPLAY_NAME));
+            final String contact_id = cursor.getString(cursor.getColumnIndex(_ID));
+            final String name = cursor.getString(cursor.getColumnIndex(DISPLAY_NAME));
             int hasPhoneNumber = Integer.parseInt(cursor.getString(cursor.getColumnIndex(HAS_PHONE_NUMBER)));
             if (hasPhoneNumber <= 0) continue;
 
             //This is to read multiple phone numbers associated with the same contact
-            Cursor phoneCursor = contentResolver.query(PhoneCONTENT_URI, null, Phone_CONTACT_ID + " = ?", new String[]{contact_id}, null);
-            if (phoneCursor == null) continue;
+            mPhoneCursor = contentResolver.query(PhoneCONTENT_URI, null, Phone_CONTACT_ID + " = ?", new String[]{contact_id}, null);
+            if (mPhoneCursor == null) continue;
 
-            while (phoneCursor.moveToNext()) {
-                phoneNumber = phoneCursor.getString(phoneCursor.getColumnIndex(NUMBER));
-                Timber.v("name " + name + " phoneNumber " + phoneNumber
-                        + " previous " + previous);
+            while (mPhoneCursor.moveToNext()) {
+                phoneNumber = mPhoneCursor.getString(mPhoneCursor.getColumnIndex(NUMBER));
+                //Timber.v("displayName " + displayName + " phoneNumber " + phoneNumber
+                //        + " previous " + previous);
 
                 //Check if number is repeated
                 //PhoneNumberUtil.MatchType mt = pnu.isNumberMatch(phoneNumber, previous);
-                //if (mt == PhoneNumberUtil.MatchType.NSN_MATCH || mt == PhoneNumberUtil.MatchType.EXACT_MATCH)
-                //    continue;
+                //if (mt == PhoneNumberUtil.MatchType.NSN_MATCH
+                //        || mt == PhoneNumberUtil.MatchType.EXACT_MATCH) continue;
+                //previous = phoneNumber;
+                //Contact.reference().child(userPhone).observe(.value, with: { snapshot in }
+                final String finalPhoneNumber = phoneNumber;
+                mUserDatabaseReference.child("user").child(phoneNumber)
+                        .addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                // Add the contact to the ArrayList
+                                Timber.v(name);
+                                if (dataSnapshot.getValue() == null) return;
+                                contact.phoneNumber = finalPhoneNumber;
+                                contact.displayName = name;
+                                contact.uid = String.valueOf(dataSnapshot.child("uid").getValue());
+                                Timber.v("contact uid = " + contact.uid);
+                                contactList.add(contact);
 
-                contact.phoneNumber = phoneNumber;
-                contact.name = name;
-                previous = phoneNumber;
-                // Add the contact to the ArrayList
-                contactList.add(contact);
+                                /*runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
+                                        mListView.setAdapter(adapter);
+                                    }
+                                });*/
+
+                            }
+
+                            @Override
+                            public void onCancelled(DatabaseError databaseError) {
+                            }
+                        });
             }
-            phoneCursor.close();
+            mPhoneCursor.close();
         }
-        // ListView has to be updated using a ui thread
+        /*// ListView has to be updated using a ui thread
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -193,7 +234,13 @@ public class ContactsActivity extends AppCompatActivity {
             public void run() {
                 pDialog.cancel();
             }
-        }, 500);
+        }, 500);*/
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (firebaseMultiQuery != null) firebaseMultiQuery.stop();
     }
 
     @Override
@@ -216,7 +263,7 @@ public class ContactsActivity extends AppCompatActivity {
     }
 
     private class Contact {
-        String name, phoneNumber;
+        String displayName, phoneNumber, uid;
     }
 
     private class ContactAdapter extends ArrayAdapter<Contact> {
@@ -234,7 +281,7 @@ public class ContactsActivity extends AppCompatActivity {
                         , parent, false);
             }
 
-            ((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).name);
+            ((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).displayName);
             ((TextView) listItemView.findViewById(R.id.phone_number)).setText(getItem(position).phoneNumber);
             /*ImageView img = listItemView.findViewById(R.id.image);
             Picasso
@@ -250,4 +297,35 @@ public class ContactsActivity extends AppCompatActivity {
             return listItemView;
         }
     }
+
+    private class AllOnCompleteListener implements OnCompleteListener<Map<DatabaseReference, DataSnapshot>> {
+        @Override
+        public void onComplete(@NonNull Task<Map<DatabaseReference, DataSnapshot>> task) {
+            if (task.isSuccessful()) {
+                final Map<DatabaseReference, DataSnapshot> result = task.getResult();
+                // Look up DataSnapshot objects using the same DatabaseReferences you passed into FirebaseMultiQuery
+            } else {
+                if (task.getException() != null)
+                    task.getException().printStackTrace();
+                // log the error or whatever you need to do
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
+                    mListView.setAdapter(adapter);
+                }
+            });
+            // Dismiss the progressbar after 500 milliseconds
+            updateBarHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    pDialog.cancel();
+                }
+            }, 500);
+
+        }
+    }
+
 }
+
