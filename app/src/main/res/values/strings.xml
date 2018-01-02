@@ -117,4 +117,7 @@
     <string name="email_fmt">Email: %s</string>
     <string name="your_name">Your Name</string>
 
+    <!--FriendlyChat-->
+    <string name="send_button_label">Send</string>
+
 </resources>

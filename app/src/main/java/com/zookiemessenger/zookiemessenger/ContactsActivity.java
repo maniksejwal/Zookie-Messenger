@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -98,9 +99,13 @@ public class ContactsActivity extends AppCompatActivity {
                                     int position, long id) {
                 //TODO Do whatever you want with the list data
                 //Toast.makeText(getApplicationContext(), "item clicked : \n" + contactList.get(position), Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(getApplicationContext(), Chats.class);
+                intent.putExtra("contactName", contactList.get(position).displayName);
+                intent.putExtra("contactUID", contactList.get(position).uid);
+                intent.putExtra("contactPhoneNumber", contactList.get(position).phoneNumber);
+                startActivity(intent);
             }
         });
-//        mFirebaseUser.reload();
         setTitle(mFirebaseUser.getDisplayName() + "'s contacts");
     }
 
@@ -126,9 +131,27 @@ public class ContactsActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
         if (requestCode == REQUEST_READ_CONTACTS) {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {}
+            else {
+                updateBarHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        pDialog.cancel();
+                    }
+                }, 500);
 
-
+                Snackbar.make(mListView, "This app requires the ability to read contacts",
+                        Snackbar.LENGTH_SHORT).setAction("Grant", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        getContacts();
+                    }
+                }).setAction("exit", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        finish();
+                    }
+                });
             }
         }
     }
@@ -210,7 +233,6 @@ public class ContactsActivity extends AppCompatActivity {
                                         mListView.setAdapter(adapter);
                                     }
                                 });*/
-
                             }
 
                             @Override
@@ -221,7 +243,7 @@ public class ContactsActivity extends AppCompatActivity {
             mPhoneCursor.close();
         }
         /*// ListView has to be updated using a ui thread
-        runOnUiThread(new Runnable() {
+        runOnUiThread(new Runnable(-) {
             @Override
             public void run() {
                 ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);

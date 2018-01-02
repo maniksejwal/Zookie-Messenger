@@ -78,7 +78,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button mResendButton;
     private Button mSignOutButton;
 
-    FirebaseMultiQuery firebaseMultiQuery;
     FirebaseUser mUser;
 
     @Override
@@ -230,7 +229,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onStop() {
         super.onStop();
-        if (firebaseMultiQuery != null) firebaseMultiQuery.stop();
     }
 
     @Override
@@ -295,31 +293,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             mUser = task.getResult().getUser();
                             UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest
                                     .Builder().setDisplayName(mNameField.getText().toString()).build();
-                            mUser.updateProfile(profileUpdates);
+                            mUser.updateProfile(profileUpdates).addOnCompleteListener(new OnCompleteListener<Void>() {
+                                @Override
+                                public void onComplete(@NonNull Task<Void> task) {
+                                    String phoneNumber = formatNumber(
+                                            ((TextView) mPhoneNumberField).getText().toString());
 
+                                    Map<String, Object> childUpdates = new HashMap<>();
+                                    childUpdates.put("displayName",
+                                            mNameField.getText().toString());
+                                    childUpdates.put("uid", mUser.getUid());
+                                    mUserDatabaseReference.child(phoneNumber)
+                                            .updateChildren(childUpdates);
 
-                            //firebaseMultiQuery = new FirebaseMultiQuery(mUserDatabaseReference);
-                            //final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
-                            //allLoad.addOnCompleteListener(MainActivity.this, new AllOnCompleteListener());
-
-                            String phoneNumber = formatNumber(((TextView) mPhoneNumberField).getText().toString());
-
-                            Map<String, Object> childUpdates = new HashMap<>();
-                            childUpdates.put("displayName", mNameField.getText().toString());
-                            childUpdates.put("uid", mUser.getUid());
-                            mUserDatabaseReference.child(phoneNumber).updateChildren(childUpdates);
-
-
-                            Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
-                            i.putExtra("displayName", mNameField.getText().toString());
-                            //i.putExtra(FRIEND_LIST, result);
-                            startActivity(i);
-                            MainActivity.this.finish();
-
-
-                            //boolean isNewUser = mFirebaseUser.
-
-                            // [END_EXCLUDE]
+                                    Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
+                                    i.putExtra("displayName", mNameField.getText().toString());
+                                    startActivity(i);
+                                    MainActivity.this.finish();
+                                    MainActivity.this.finish();
+                                }
+                            });
                         } else {
                             // Sign in failed, display a message and update the UI
                             Log.w(TAG, "signInWithCredential:failure", task.getException());
@@ -415,6 +408,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     user.reload();
                     Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
                     //i.putExtra(FRIEND_LIST, result);
+                    Timber.v("logged in, starting contactsActivity");
                     startActivity(i);
                     MainActivity.this.finish();
                     // Np-op, handled by sign-in check
@@ -515,3 +509,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }*/
 
 }
+
+//TODO: handle failed network

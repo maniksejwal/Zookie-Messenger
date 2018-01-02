@@ -74,6 +74,7 @@
         </activity>
         <activity android:name=".ContactsActivity" />
         <activity android:name=".ContactsActivity" />
+        <activity android:name=".Chats" />
 
         <service android:name=".Old.services.IMService" />
 
