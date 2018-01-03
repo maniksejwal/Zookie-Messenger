@@ -101,7 +101,7 @@ public class ContactsActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
-                Intent intent = new Intent(getApplicationContext(), Chats.class);
+                Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
                 intent.putExtra("contactName", contactList.get(position).displayName);
                 intent.putExtra("contactUID", contactList.get(position).uid);
                 intent.putExtra("contactPhoneNumber", contactList.get(position).phoneNumber);
@@ -158,7 +158,7 @@ public class ContactsActivity extends AppCompatActivity {
         }
     }
 
-    public void getContacts() {
+    private void getContacts() {
         Timber.v("getContacts");
         if (!mayRequestContacts()) {
             return;

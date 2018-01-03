@@ -300,8 +300,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     mUsersDatabaseReference.child(mUser.getPhoneNumber())
                                             .updateChildren(childUpdates);
 
-                                    Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
-                                    i.putExtra("displayName", mNameField.getText().toString());
+                                    Intent i = new Intent(getApplicationContext(), Chats.class);
                                     startActivity(i);
                                     MainActivity.this.finish();
                                 }
@@ -399,7 +398,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //            .getText().toString()).build();
                     //mFirebaseUser.updateProfile(profileUpdates);
                     user.reload();
-                    Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
+                    Intent i = new Intent(getApplicationContext(), Chats.class);
                     //i.putExtra(FRIEND_LIST, result);
                     Timber.v("logged in, starting contactsActivity");
                     startActivity(i);

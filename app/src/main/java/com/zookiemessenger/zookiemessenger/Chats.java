@@ -1,260 +1,319 @@
 package com.zookiemessenger.zookiemessenger;
 
+import android.app.ProgressDialog;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.provider.ContactsContract;
+import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.text.Editable;
-import android.text.InputFilter;
-import android.text.TextWatcher;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.Toast;
+import android.widget.TextView;
 
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 
 import timber.log.Timber;
 
-/**
- * Created by manik on 24/12/17.
- */
+import static android.Manifest.permission.READ_CONTACTS;
 
 public class Chats extends AppCompatActivity {
-    public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
+    private static final int REQUEST_READ_CONTACTS = 444;
+    private static final int LOG_OUT_ID = Menu.FIRST;
 
-    private ListView mMessageListView;
-    private MessageAdapter mMessageAdapter;
-    private ProgressBar mProgressBar;
-    private ImageButton mPhotoPickerButton;
-    private EditText mMessageEditText;
-    private Button mSendButton;
+    private ListView mListView;
+    private ProgressDialog pDialog;
+    private Handler updateBarHandler;
 
-    private FirebaseUser mFirebaseUser;
-    private FirebaseDatabase mFirebaseDatabase;
-    private FirebaseStorage mFirebaseStorage;
+    Cursor cursor;
 
-    private DatabaseReference mUserDatabaseReference;
+    FirebaseUser mFirebaseUser;
+    FirebaseDatabase mFirebaseDatabase;
+
+    DatabaseReference mUserDatabaseReference;
     private DatabaseReference mChatsDatabaseReference;
-    private StorageReference mChatPhotosStorageReference;
 
-    private String mChatKey = null;
 
-    private ChildEventListener mChildEventListener;
+    FirebaseMultiQuery firebaseMultiQuery;
 
-    private String mContactPhoneNumber;
-    private String mContactName;
-    private String mUserPhoneNumber;
-
-    public static final int RC_SIGN_IN = 1;
-    private static final int RC_PHOTO_PICKER = 2;
-    public static final String FRIENDLY_MSG_LENGTH_KEY = "friendly_msg_length";
+    ArrayList<Chat> mChatList = new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chats);
 
-        setDatabasesAndReferences();
-
-        setTitle(mContactPhoneNumber);
-
-        // Initialize references to views
-        mProgressBar = findViewById(R.id.progressBar);
-        mMessageListView = findViewById(R.id.messageListView);
-        mPhotoPickerButton = findViewById(R.id.photoPickerButton);
-        mMessageEditText = findViewById(R.id.messageEditText);
-        mSendButton = findViewById(R.id.sendButton);
-
-        // Initialize message ListView and its adapter
-        List<FriendlyMessage> friendlyMessages = new ArrayList<>();
-        mMessageAdapter = new MessageAdapter(this, R.layout.item_message, friendlyMessages);
-        mMessageListView.setAdapter(mMessageAdapter);
-
-        // Initialize progress bar
-        mProgressBar.setVisibility(ProgressBar.INVISIBLE);
-
-        // ImagePickerButton shows an image picker to upload a image for a message
-        mPhotoPickerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("image/jpeg");
-                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                startActivityForResult(Intent.createChooser(
-                        intent, "Complete action using"), RC_PHOTO_PICKER);
-            }
-        });
-
-        // Enable Send button when there's text to send
-        mMessageEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if (charSequence.toString().trim().length() > 0) {
-                    mSendButton.setEnabled(true);
-                } else {
-                    mSendButton.setEnabled(false);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-            }
-        });
-        mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(DEFAULT_MSG_LENGTH_LIMIT)});
-
-        // Send button sends a message and clears the EditText
-        mSendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString()
-                        , mUserPhoneNumber, mContactPhoneNumber, null);
-                mChatsDatabaseReference.child(mChatKey).push().setValue(friendlyMessage);
-                // Clear input box
-                mMessageEditText.setText("");
-            }
-        });
-    }
-
-    private void setDatabasesAndReferences() {
         mFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         mFirebaseDatabase = FirebaseDatabase.getInstance();
-        mFirebaseStorage = FirebaseStorage.getInstance();
 
-        mUserDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
+        if (mFirebaseUser == null) throw new RuntimeException("mFirebaseUser is null");
+
+        mUserDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users) + "/" + mFirebaseUser.getPhoneNumber());
         mChatsDatabaseReference = mFirebaseDatabase.getReference().child("chats");
-        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
 
-        Intent intent = getIntent();
-        mContactPhoneNumber = intent.getStringExtra("contactPhoneNumber");
-        mContactName = intent.getStringExtra("contactName");
-        mUserPhoneNumber = mFirebaseUser.getPhoneNumber();
 
-        mUserDatabaseReference.child(mUserPhoneNumber + "/chats/" + mContactPhoneNumber)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
+
+        pDialog = new ProgressDialog(this);
+        pDialog.setCancelable(false);
+        pDialog.show();
+        Timber.d("ListViewID" + findViewById(R.id.list).getId());
+        mListView = findViewById(R.id.list);
+        updateBarHandler = new Handler();
+        // Since reading contacts takes more time, let's run it on a separate thread.
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                getChats();
+            }
+        }).start();
+
+        Timber.v("setting clickListeners");
+
+        // Set onClickListener to the list item.
+        mListView.setOnItemClickListener(new OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view,
+                                    int position, long id) {
+                Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
+                intent.putExtra("contactPhoneNumber", mChatList.get(position).phoneNumber);
+                startActivity(intent);
+            }
+        });
+        setTitle(mFirebaseUser.getDisplayName());
+    }
+
+    private boolean mayRequestContacts() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+        if (checkSelfPermission(READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+            return true;
+        }
+        if (shouldShowRequestPermissionRationale(READ_CONTACTS)) {
+            requestPermissions(new String[]{READ_CONTACTS}, REQUEST_READ_CONTACTS);
+        } else {
+            requestPermissions(new String[]{READ_CONTACTS}, REQUEST_READ_CONTACTS);
+        }
+        return false;
+    }
+
+    /**
+     * Callback received when a permissions request has been completed.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        if (requestCode == REQUEST_READ_CONTACTS) {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            } else {
+                updateBarHandler.postDelayed(new Runnable() {
                     @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        Timber.v("hasValue " + dataSnapshot.toString());
-                        Timber.v("value " + dataSnapshot.getValue());
-
-                        if (dataSnapshot.getValue() == null) {
-                            //make a chat key and add to the users
-                            mChatKey = mChatsDatabaseReference.push().getKey();
-                            Timber.v("chat key: " + mChatKey);
-                            mUserDatabaseReference.child(mContactPhoneNumber + "/chats/" + mUserPhoneNumber)
-                                    .setValue(mChatKey);
-                            mUserDatabaseReference.child(mUserPhoneNumber + "/chats/" + mContactPhoneNumber)
-                                    .setValue(mChatKey);
-                        } else mChatKey = String.valueOf(dataSnapshot.getValue());
-
-
-                        Timber.d("mChatKey" + mChatKey);
-                        Timber.v(dataSnapshot + "");
-
-                        attachDatabaseReadListener();
-                        Toast.makeText(getApplicationContext(), mChatKey, Toast.LENGTH_SHORT).show();
+                    public void run() {
+                        pDialog.cancel();
                     }
+                }, 500);
 
+                Snackbar.make(mListView, "This app requires the ability to read contacts",
+                        Snackbar.LENGTH_SHORT).setAction("Grant", new View.OnClickListener() {
                     @Override
-                    public void onCancelled(DatabaseError databaseError) {
-
+                    public void onClick(View view) {
+                        getChats();
+                    }
+                }).setAction("exit", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        finish();
                     }
                 });
+            }
+        }
     }
 
-    private void attachDatabaseReadListener() {
-        if (mChildEventListener != null) return;
-        mChildEventListener = new ChildEventListener() {
+    private void getChats() {
+        Timber.v("getContacts");
+        if (!mayRequestContacts()) {
+            return;
+        }
+
+        firebaseMultiQuery = new FirebaseMultiQuery(mUserDatabaseReference);
+        final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
+        allLoad.addOnCompleteListener(this, new Chats.AllOnCompleteListener());
+
+        Uri CONTENT_URI = ContactsContract.Contacts.CONTENT_URI;
+
+        //Uri EmailCONTENT_URI = ContactsContract.CommonDataKinds.Email.CONTENT_URI;
+        //String EmailCONTACT_ID = ContactsContract.CommonDataKinds.Email.CONTACT_ID;
+        //String DATA = ContactsContract.CommonDataKinds.Email.DATA;
+        ContentResolver contentResolver = getContentResolver();
+        cursor = contentResolver.query(CONTENT_URI, null, null, null, null);
+        // Iterate every contact in the phone
+
+
+        mUserDatabaseReference.child("chats").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
-                mMessageAdapter.add(friendlyMessage);
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Timber.v("dataSnapshot = " + dataSnapshot);
+                for (DataSnapshot childSnapshot : dataSnapshot.getChildren()) {
+                    Timber.v("childSnapshot = " + childSnapshot);
+                    Timber.v("phoneNumber " + childSnapshot.child("phoneNumber").getValue() +
+                            "\nchatID" + childSnapshot.child("chat").getValue());
+
+                    if (childSnapshot.getValue() == null &&
+                            childSnapshot.child("chat").getValue() == null) continue;
+
+                    Chat chat = new Chat(childSnapshot.getKey(),
+                            childSnapshot.getValue().toString());
+                    mChatList.add(chat);
+                }
+                                /*runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
+                                        mListView.setAdapter(adapter);
+                                    }
+                                });*/
             }
 
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-            }
-
-            public void onChildRemoved(DataSnapshot dataSnapshot) {
-            }
-
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-            }
-
+            @Override
             public void onCancelled(DatabaseError databaseError) {
             }
-        };
-        mChatsDatabaseReference.child(mChatKey).addChildEventListener(mChildEventListener);
-    }
+        });
 
-    private void detachDatabaseReadListener() {
-        if (mChildEventListener != null) {
-            mChatsDatabaseReference.child(mChatKey).removeEventListener(mChildEventListener);
-            mChildEventListener = null;
-        }
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == RC_SIGN_IN) {
-            if (resultCode == RESULT_OK) {
-                // Sign-in succeeded, set up the UI
-                Toast.makeText(this, "Signed in!", Toast.LENGTH_SHORT).show();
-            } else if (resultCode == RESULT_CANCELED) {
-                // Sign in was canceled by the user, finish the activity
-                Toast.makeText(this, "Sign in canceled", Toast.LENGTH_SHORT).show();
-                finish();
+        /*// ListView has to be updated using a ui thread
+        runOnUiThread(new Runnable(-) {
+            @Override
+            public void run() {
+                ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
+                mListView.setAdapter(adapter);
             }
-        } else if (requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK) {
-            Uri selectedImageUri = data.getData();
-
-            // Get a reference to store file at chat_photos/<FILENAME>
-            StorageReference photoRef = mChatPhotosStorageReference.child(selectedImageUri.getLastPathSegment());
-
-            // Upload file to Firebase Storage
-            photoRef.putFile(selectedImageUri)
-                    .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                            // When the image has successfully uploaded, we get its download URL
-                            Uri downloadUrl = taskSnapshot.getDownloadUrl();
-
-                            // Set the download URL to the message box, so that the user can send it to the database
-                            FriendlyMessage friendlyMessage = new FriendlyMessage(null
-                                    , mUserPhoneNumber, mContactPhoneNumber, downloadUrl.toString());
-                            mChatsDatabaseReference.child(mChatKey).setValue(friendlyMessage);
-
-                        }
-                    });
-
-        }
+        });
+        // Dismiss the progressbar after 500 milliseconds
+        updateBarHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                pDialog.cancel();
+            }
+        }, 500);*/
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (firebaseMultiQuery != null) firebaseMultiQuery.stop();
+    }
 
-        //mMessageAdapter.clear();
-        detachDatabaseReadListener();
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        Timber.v("entered onCreateOptionsMenu()");
+        menu.add(0, LOG_OUT_ID, 0, R.string.sign_out);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case LOG_OUT_ID: {
+                FirebaseAuth.getInstance().signOut();
+                finish();
+                startActivity(new Intent(this, MainActivity.class));
+            }
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private class ChatAdapter extends ArrayAdapter<Chat> {
+
+        ChatAdapter(@NonNull Context context, ArrayList<Chat> chats) {
+            super(context, 0, chats);
+            Timber.v("ContactAdapter created");
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View listItemView = convertView;
+            if (listItemView == null) {
+                listItemView = LayoutInflater.from(getContext()).inflate(R.layout.contacts_list_item
+                        , parent, false);
+            }
+
+            //((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).displayName);
+            ((TextView) listItemView.findViewById(R.id.phone_number)).setText(getItem(position).phoneNumber);
+            /*ImageView img = listItemView.findViewById(R.id.image);
+            Picasso
+                    .with(getApplicationContext())
+                    .load(getItem(position).mImageId)
+                    .placeholder(R.mipmap.launcher_ic)
+                    .fit()
+                    .centerCrop()
+                    //.centerInside()                 // or .centerCrop() to avoid a stretched imageÒ
+                    .into(img);
+                    */
+
+            return listItemView;
+        }
+    }
+
+    private class AllOnCompleteListener implements OnCompleteListener<Map<DatabaseReference, DataSnapshot>> {
+        @Override
+        public void onComplete(@NonNull Task<Map<DatabaseReference, DataSnapshot>> task) {
+            if (task.isSuccessful()) {
+                final Map<DatabaseReference, DataSnapshot> result = task.getResult();
+                // Look up DataSnapshot objects using the same DatabaseReferences you passed into FirebaseMultiQuery
+            } else {
+                if (task.getException() != null)
+                    task.getException().printStackTrace();
+                // log the error or whatever you need to do
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    ChatAdapter adapter = new ChatAdapter(getApplicationContext(), mChatList);
+                    mListView.setAdapter(adapter);
+                }
+            });
+            // Dismiss the progressbar after 500 milliseconds
+            updateBarHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    pDialog.cancel();
+                }
+            }, 500);
+
+        }
+    }
+
+    private class Chat {
+        String phoneNumber;
+        String chatID;
+
+        Chat(String phone, String chat) {
+            phoneNumber = phone;
+            chatID = chat;
+        }
     }
 }
