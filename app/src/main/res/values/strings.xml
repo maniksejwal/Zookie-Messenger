@@ -333,5 +333,7 @@
     </string-array>
 
     <string name="users">user</string>
+    <string name="messages">messages</string>
+    <string name="chats">chats</string>
 
 </resources>

@@ -77,7 +77,6 @@ public class Chats extends AppCompatActivity {
         mChatsDatabaseReference = mFirebaseDatabase.getReference().child("chats");
 
 
-
         pDialog = new ProgressDialog(this);
         pDialog.setCancelable(false);
         pDialog.show();
@@ -185,9 +184,11 @@ public class Chats extends AppCompatActivity {
 
                     if (childSnapshot.getValue() == null &&
                             childSnapshot.child("chat").getValue() == null) continue;
+                    Chat chat;
+                    if (childSnapshot.getKey().equals("groups"))
+                        chat = new Chat("", childSnapshot.getValue().toString());
+                    else chat = new Chat(childSnapshot.getKey(), childSnapshot.getValue().toString());
 
-                    Chat chat = new Chat(childSnapshot.getKey(),
-                            childSnapshot.getValue().toString());
                     mChatList.add(chat);
                 }
                                 /*runOnUiThread(new Runnable() {

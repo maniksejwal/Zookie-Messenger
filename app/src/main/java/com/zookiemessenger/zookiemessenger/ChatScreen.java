@@ -63,9 +63,10 @@ public class ChatScreen extends AppCompatActivity {
     private String mContactName;
     private String mUserPhoneNumber;
 
+    private boolean isGroupChat = false;
+
     public static final int RC_SIGN_IN = 1;
     private static final int RC_PHOTO_PICKER = 2;
-    public static final String FRIENDLY_MSG_LENGTH_KEY = "friendly_msg_length";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,7 +131,7 @@ public class ChatScreen extends AppCompatActivity {
             public void onClick(View view) {
                 FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString()
                         , mUserPhoneNumber, mContactPhoneNumber, null);
-                mChatsDatabaseReference.child(mChatKey + "/messages").push().setValue(friendlyMessage);
+                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
                 // Clear input box
                 mMessageEditText.setText("");
             }
@@ -143,7 +144,7 @@ public class ChatScreen extends AppCompatActivity {
         mFirebaseStorage = FirebaseStorage.getInstance();
 
         mUserDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
-        mChatsDatabaseReference = mFirebaseDatabase.getReference().child("chats");
+        mChatsDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.chats));
         mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
 
         Intent intent = getIntent();
@@ -151,27 +152,25 @@ public class ChatScreen extends AppCompatActivity {
         mContactName = intent.getStringExtra("contactName");
         mUserPhoneNumber = mFirebaseUser.getPhoneNumber();
 
-        mUserDatabaseReference.child(mUserPhoneNumber + "/chats/" + mContactPhoneNumber)
+        mUserDatabaseReference.child(mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactPhoneNumber)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
-                        Timber.v("hasValue " + dataSnapshot.toString());
                         Timber.v("value " + dataSnapshot.getValue());
 
                         if (dataSnapshot.getValue() == null) {
                             //make a chat key and add to the users
                             mChatKey = mChatsDatabaseReference.push().getKey();
                             Timber.v("chat key: " + mChatKey);
-                            mUserDatabaseReference.child(mContactPhoneNumber + "/chats/" + mUserPhoneNumber)
+                            mUserDatabaseReference.child(
+                                    mContactPhoneNumber + "/" + getString(R.string.chats) + "/" + mUserPhoneNumber)
                                     .setValue(mChatKey);
-                            mUserDatabaseReference.child(mUserPhoneNumber + "/chats/" + mContactPhoneNumber)
+                            mUserDatabaseReference.child(
+                                    mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactPhoneNumber)
                                     .setValue(mChatKey);
                         } else mChatKey = String.valueOf(dataSnapshot.getValue());
 
-
                         Timber.d("mChatKey" + mChatKey);
-                        Timber.v(dataSnapshot + "");
-
                         attachDatabaseReadListener();
                     }
 
@@ -203,12 +202,12 @@ public class ChatScreen extends AppCompatActivity {
             public void onCancelled(DatabaseError databaseError) {
             }
         };
-        mChatsDatabaseReference.child(mChatKey + "/messages").addChildEventListener(mChildEventListener);
+        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).addChildEventListener(mChildEventListener);
     }
 
     private void detachDatabaseReadListener() {
         if (mChildEventListener != null) {
-            mChatsDatabaseReference.child(mChatKey).removeEventListener(mChildEventListener);
+            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).removeEventListener(mChildEventListener);
             mChildEventListener = null;
         }
     }
@@ -241,7 +240,7 @@ public class ChatScreen extends AppCompatActivity {
                             // Set the download URL to the message box, so that the user can send it to the database
                             FriendlyMessage friendlyMessage = new FriendlyMessage(null
                                     , mUserPhoneNumber, mContactPhoneNumber, downloadUrl.toString());
-                            mChatsDatabaseReference.child(mChatKey).setValue(friendlyMessage);
+                            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).setValue(friendlyMessage);
 
                         }
                     });
