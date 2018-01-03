@@ -38,8 +38,6 @@ import java.util.concurrent.TimeUnit;
 
 import timber.log.Timber;
 
-import static android.telephony.PhoneNumberUtils.formatNumber;
-
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = "PhoneAuthActivity";
@@ -56,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private FirebaseAuth mAuth;
     private FirebaseDatabase mFirebaseDatabase;
 
-    private DatabaseReference mUserDatabaseReference;
+    private DatabaseReference mUsersDatabaseReference;
 
     private boolean mVerificationInProgress = false;
     private String mVerificationId;
@@ -87,19 +85,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (BuildConfig.DEBUG) Timber.plant(new Timber.DebugTree());
         Timber.i("Logging enabled");
         // Restore instance state
-        if (savedInstanceState != null) {
-            onRestoreInstanceState(savedInstanceState);
-        }
+        if (savedInstanceState != null) onRestoreInstanceState(savedInstanceState);
 
         // Assign views
-        mPhoneNumberViews = (ViewGroup) findViewById(R.id.phone_auth_fields);
-        mSignedInViews = (ViewGroup) findViewById(R.id.signed_in_buttons);
+        mPhoneNumberViews = findViewById(R.id.phone_auth_fields);
+        mSignedInViews = findViewById(R.id.signed_in_buttons);
 
-        mStatusText = (TextView) findViewById(R.id.status);
-        mDetailText = (TextView) findViewById(R.id.detail);
+        mStatusText = findViewById(R.id.status);
+        mDetailText = findViewById(R.id.detail);
 
-        mNameField = (EditText) findViewById(R.id.field_name);
-        mPhoneNumberField = (EditText) findViewById(R.id.field_phone_number);
+        mNameField = findViewById(R.id.field_name);
+        mPhoneNumberField = findViewById(R.id.field_phone_number);
         mPhoneNumberField.setOnEditorActionListener(new EditText.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
@@ -114,12 +110,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return false;
             }
         });
-        mVerificationField = (EditText) findViewById(R.id.field_verification_code);
+        mVerificationField = findViewById(R.id.field_verification_code);
 
-        mStartButton = (Button) findViewById(R.id.button_start_verification);
-        mVerifyButton = (Button) findViewById(R.id.button_verify_phone);
-        mResendButton = (Button) findViewById(R.id.button_resend);
-        mSignOutButton = (Button) findViewById(R.id.sign_out_button);
+        mStartButton = findViewById(R.id.button_start_verification);
+        mVerifyButton = findViewById(R.id.button_verify_phone);
+        mResendButton = findViewById(R.id.button_resend);
+        mSignOutButton = findViewById(R.id.sign_out_button);
 
         // Assign click listeners
         mStartButton.setOnClickListener(this);
@@ -130,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // [START initialize_auth]
         mAuth = FirebaseAuth.getInstance();
         mFirebaseDatabase = FirebaseDatabase.getInstance();
-        mUserDatabaseReference = mFirebaseDatabase.getReference().child("user");
+        mUsersDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
 
         // [END initialize_auth]
 
@@ -296,20 +292,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             mUser.updateProfile(profileUpdates).addOnCompleteListener(new OnCompleteListener<Void>() {
                                 @Override
                                 public void onComplete(@NonNull Task<Void> task) {
-                                    String phoneNumber = formatNumber(
-                                            ((TextView) mPhoneNumberField).getText().toString());
 
                                     Map<String, Object> childUpdates = new HashMap<>();
                                     childUpdates.put("displayName",
                                             mNameField.getText().toString());
                                     childUpdates.put("uid", mUser.getUid());
-                                    mUserDatabaseReference.child(phoneNumber)
+                                    mUsersDatabaseReference.child(mUser.getPhoneNumber())
                                             .updateChildren(childUpdates);
 
                                     Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
                                     i.putExtra("displayName", mNameField.getText().toString());
                                     startActivity(i);
-                                    MainActivity.this.finish();
                                     MainActivity.this.finish();
                                 }
                             });
@@ -511,3 +504,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 }
 
 //TODO: handle failed network
+//TODO: Handle wrong verification code
+//TODO: Handle onPause and onStart

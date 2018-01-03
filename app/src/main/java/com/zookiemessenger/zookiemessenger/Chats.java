@@ -16,11 +16,14 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -28,12 +31,13 @@ import com.google.firebase.storage.UploadTask;
 import java.util.ArrayList;
 import java.util.List;
 
+import timber.log.Timber;
+
 /**
  * Created by manik on 24/12/17.
  */
 
-public class Chats extends AppCompatActivity{
-    public static final String ANONYMOUS = "anonymous";
+public class Chats extends AppCompatActivity {
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
 
     private ListView mMessageListView;
@@ -43,15 +47,21 @@ public class Chats extends AppCompatActivity{
     private EditText mMessageEditText;
     private Button mSendButton;
 
-    private String mUsername;
-
+    private FirebaseUser mFirebaseUser;
     private FirebaseDatabase mFirebaseDatabase;
     private FirebaseStorage mFirebaseStorage;
 
+    private DatabaseReference mUserDatabaseReference;
     private DatabaseReference mChatsDatabaseReference;
-    private StorageReference  mChatPhotosStorageReference;
+    private StorageReference mChatPhotosStorageReference;
+
+    private String mChatKey = null;
 
     private ChildEventListener mChildEventListener;
+
+    private String mContactPhoneNumber;
+    private String mContactName;
+    private String mUserPhoneNumber;
 
     public static final int RC_SIGN_IN = 1;
     private static final int RC_PHOTO_PICKER = 2;
@@ -62,13 +72,9 @@ public class Chats extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chats);
 
-        mFirebaseDatabase = FirebaseDatabase.getInstance();
-        mFirebaseStorage = FirebaseStorage.getInstance();
+        setDatabasesAndReferences();
 
-        mChatsDatabaseReference = mFirebaseDatabase.getReference().child("chats");
-        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
-
-        mUsername = ANONYMOUS;
+        setTitle(mContactPhoneNumber);
 
         // Initialize references to views
         mProgressBar = findViewById(R.id.progressBar);
@@ -122,15 +128,59 @@ public class Chats extends AppCompatActivity{
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                FriendlyMessage friendlyMessage = new FriendlyMessage(
-                        mMessageEditText.getText().toString(), mUsername, null);
-                mChatsDatabaseReference.push().setValue(friendlyMessage);
+                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString()
+                        , mUserPhoneNumber, mContactPhoneNumber, null);
+                mChatsDatabaseReference.child(mChatKey).push().setValue(friendlyMessage);
                 // Clear input box
                 mMessageEditText.setText("");
             }
         });
+    }
 
-        attachDatabaseReadListener();
+    private void setDatabasesAndReferences() {
+        mFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        mFirebaseDatabase = FirebaseDatabase.getInstance();
+        mFirebaseStorage = FirebaseStorage.getInstance();
+
+        mUserDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
+        mChatsDatabaseReference = mFirebaseDatabase.getReference().child("chats");
+        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
+
+        Intent intent = getIntent();
+        mContactPhoneNumber = intent.getStringExtra("contactPhoneNumber");
+        mContactName = intent.getStringExtra("contactName");
+        mUserPhoneNumber = mFirebaseUser.getPhoneNumber();
+
+        mUserDatabaseReference.child(mUserPhoneNumber + "/chats/" + mContactPhoneNumber)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        Timber.v("hasValue " + dataSnapshot.toString());
+                        Timber.v("value " + dataSnapshot.getValue());
+
+                        if (dataSnapshot.getValue() == null) {
+                            //make a chat key and add to the users
+                            mChatKey = mChatsDatabaseReference.push().getKey();
+                            Timber.v("chat key: " + mChatKey);
+                            mUserDatabaseReference.child(mContactPhoneNumber + "/chats/" + mUserPhoneNumber)
+                                    .setValue(mChatKey);
+                            mUserDatabaseReference.child(mUserPhoneNumber + "/chats/" + mContactPhoneNumber)
+                                    .setValue(mChatKey);
+                        } else mChatKey = String.valueOf(dataSnapshot.getValue());
+
+
+                        Timber.d("mChatKey" + mChatKey);
+                        Timber.v(dataSnapshot + "");
+
+                        attachDatabaseReadListener();
+                        Toast.makeText(getApplicationContext(), mChatKey, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
     }
 
     private void attachDatabaseReadListener() {
@@ -154,12 +204,12 @@ public class Chats extends AppCompatActivity{
             public void onCancelled(DatabaseError databaseError) {
             }
         };
-        mChatsDatabaseReference.addChildEventListener(mChildEventListener);
+        mChatsDatabaseReference.child(mChatKey).addChildEventListener(mChildEventListener);
     }
 
     private void detachDatabaseReadListener() {
         if (mChildEventListener != null) {
-            mChatsDatabaseReference.removeEventListener(mChildEventListener);
+            mChatsDatabaseReference.child(mChatKey).removeEventListener(mChildEventListener);
             mChildEventListener = null;
         }
     }
@@ -190,8 +240,10 @@ public class Chats extends AppCompatActivity{
                             Uri downloadUrl = taskSnapshot.getDownloadUrl();
 
                             // Set the download URL to the message box, so that the user can send it to the database
-                            FriendlyMessage friendlyMessage = new FriendlyMessage(null, mUsername, downloadUrl.toString());
-                            mChatsDatabaseReference.push().setValue(friendlyMessage);
+                            FriendlyMessage friendlyMessage = new FriendlyMessage(null
+                                    , mUserPhoneNumber, mContactPhoneNumber, downloadUrl.toString());
+                            mChatsDatabaseReference.child(mChatKey).setValue(friendlyMessage);
+
                         }
                     });
 

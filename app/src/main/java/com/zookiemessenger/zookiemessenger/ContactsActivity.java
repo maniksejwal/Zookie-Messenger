@@ -14,6 +14,7 @@ import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.telephony.TelephonyManager;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -45,6 +46,7 @@ import static android.Manifest.permission.READ_CONTACTS;
 /**
  * Created by manik on 25/12/17.
  */
+
 public class ContactsActivity extends AppCompatActivity {
     private static final int REQUEST_READ_CONTACTS = 444;
     private ListView mListView;
@@ -57,7 +59,7 @@ public class ContactsActivity extends AppCompatActivity {
 
     FirebaseUser mFirebaseUser;
     FirebaseDatabase mFirebaseDatabase;
-    DatabaseReference mUserDatabaseReference;
+    DatabaseReference mUsersDatabaseReference;
 
     FirebaseMultiQuery firebaseMultiQuery;
     Cursor mPhoneCursor;
@@ -71,7 +73,7 @@ public class ContactsActivity extends AppCompatActivity {
         mFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         mFirebaseDatabase = FirebaseDatabase.getInstance();
 
-        mUserDatabaseReference = mFirebaseDatabase.getReference();
+        mUsersDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
 
         if (mFirebaseUser == null) {
             finish();
@@ -92,13 +94,13 @@ public class ContactsActivity extends AppCompatActivity {
             }
         }).start();
 
+        Timber.v("setting clickListeners");
+
         // Set onClickListener to the list item.
         mListView.setOnItemClickListener(new OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
-                //TODO Do whatever you want with the list data
-                //Toast.makeText(getApplicationContext(), "item clicked : \n" + contactList.get(position), Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(getApplicationContext(), Chats.class);
                 intent.putExtra("contactName", contactList.get(position).displayName);
                 intent.putExtra("contactUID", contactList.get(position).uid);
@@ -131,8 +133,8 @@ public class ContactsActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
         if (requestCode == REQUEST_READ_CONTACTS) {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {}
-            else {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            } else {
                 updateBarHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -157,11 +159,12 @@ public class ContactsActivity extends AppCompatActivity {
     }
 
     public void getContacts() {
+        Timber.v("getContacts");
         if (!mayRequestContacts()) {
             return;
         }
 
-        firebaseMultiQuery = new FirebaseMultiQuery(mUserDatabaseReference);
+        firebaseMultiQuery = new FirebaseMultiQuery(mUsersDatabaseReference);
         final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
         allLoad.addOnCompleteListener(this, new AllOnCompleteListener());
 
@@ -203,8 +206,7 @@ public class ContactsActivity extends AppCompatActivity {
 
             while (mPhoneCursor.moveToNext()) {
                 phoneNumber = mPhoneCursor.getString(mPhoneCursor.getColumnIndex(NUMBER));
-                //Timber.v("displayName " + displayName + " phoneNumber " + phoneNumber
-                //        + " previous " + previous);
+                Timber.v("phoneNumber " + phoneNumber);
 
                 //Check if number is repeated
                 //PhoneNumberUtil.MatchType mt = pnu.isNumberMatch(phoneNumber, previous);
@@ -212,13 +214,16 @@ public class ContactsActivity extends AppCompatActivity {
                 //        || mt == PhoneNumberUtil.MatchType.EXACT_MATCH) continue;
                 //previous = phoneNumber;
                 //Contact.reference().child(userPhone).observe(.value, with: { snapshot in }
-                final String finalPhoneNumber = phoneNumber;
-                mUserDatabaseReference.child("user").child(phoneNumber)
+
+
+                final String finalPhoneNumber = getTelephone(phoneNumber);
+                Timber.v("finalPhoneNumber " + finalPhoneNumber);
+                mUsersDatabaseReference.child(finalPhoneNumber)
                         .addListenerForSingleValueEvent(new ValueEventListener() {
                             @Override
                             public void onDataChange(DataSnapshot dataSnapshot) {
                                 // Add the contact to the ArrayList
-                                Timber.v(name);
+                                Timber.v(finalPhoneNumber);
                                 if (dataSnapshot.getValue() == null) return;
                                 contact.phoneNumber = finalPhoneNumber;
                                 contact.displayName = name;
@@ -257,6 +262,41 @@ public class ContactsActivity extends AppCompatActivity {
                 pDialog.cancel();
             }
         }, 500);*/
+    }
+
+    private String getTelephone(String phoneNumber) {
+        StringBuilder phoneBuilder = new StringBuilder();
+        if (!phoneNumber.contains("+")) {
+            String countryID, countryZipCode = "";
+
+            TelephonyManager manager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            //getNetworkCountryIso
+            countryID = manager.getSimCountryIso().toUpperCase();
+            String[] rl = getApplicationContext().getResources().getStringArray(R.array.CountryCodes);
+            for (String aRl : rl) {
+                String[] g = aRl.split(",");
+                if (g[1].trim().equals(countryID.trim())) {
+                    countryZipCode = g[0];
+                    break;
+                }
+            }
+            Timber.v("country code: " + countryZipCode);
+            phoneNumber = countryZipCode + phoneNumber;
+
+        }
+        Timber.v("phoneNumber :" + phoneNumber);
+        for (int i = 0; i < phoneNumber.length(); i++) {
+            switch (phoneNumber.charAt(i)) {
+                case '(':
+                case ')':
+                case ' ':
+                case '-':
+                    continue;
+                default:
+                    phoneBuilder.append(phoneNumber.charAt(i));
+            }
+        }
+        return phoneBuilder.toString();
     }
 
     @Override
