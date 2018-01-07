@@ -7,17 +7,22 @@ package com.zookiemessenger.zookiemessenger;
 public class FriendlyMessage {
 
     private String text;
-    private String userPhoneNumber, contactPhoneNumber;
-    private String photoUrl;
+    private String userPhoneNumber;
+    private String url;
+    private String type;
 
     public FriendlyMessage() {
     }
 
-    public FriendlyMessage(String text, String user, String contact, String photoUrl) {
+    public FriendlyMessage(String text, String user, String type, String url) {
         this.text = text;
         this.userPhoneNumber = user;
-        this.contactPhoneNumber = contact;
-        this.photoUrl = photoUrl;
+        this.url = url;
+        this.type = type;
+    }
+
+    public String getType() {
+        return type;
     }
 
     public String getText() {
@@ -36,11 +41,11 @@ public class FriendlyMessage {
         this.userPhoneNumber = name;
     }
 
-    public String getPhotoUrl() {
-        return photoUrl;
+    public String getUrl() {
+        return url;
     }
 
-    public void setPhotoUrl(String photoUrl) {
-        this.photoUrl = photoUrl;
+    public void setPhotoUrl(String url) {
+        this.url = url;
     }
 }

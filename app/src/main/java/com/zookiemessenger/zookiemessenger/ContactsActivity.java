@@ -1,6 +1,5 @@
 package com.zookiemessenger.zookiemessenger;
 
-import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -49,12 +48,16 @@ import static android.Manifest.permission.READ_CONTACTS;
 
 public class ContactsActivity extends AppCompatActivity {
     private static final int REQUEST_READ_CONTACTS = 444;
-    private ListView mListView;
-    private ProgressDialog pDialog;
-    private Handler updateBarHandler;
     private static final int LOG_OUT_ID = Menu.FIRST;
+
+    private ListView mListView;
+    //private ProgressDialog pDialog;
+    private Handler updateBarHandler;
     ArrayList<Contact> contactList = new ArrayList<>();
+    ArrayList<String> memberList = new ArrayList<>();
+
     Cursor cursor;
+    Cursor mPhoneCursor;
     int counter;
 
     FirebaseUser mFirebaseUser;
@@ -62,7 +65,8 @@ public class ContactsActivity extends AppCompatActivity {
     DatabaseReference mUsersDatabaseReference;
 
     FirebaseMultiQuery firebaseMultiQuery;
-    Cursor mPhoneCursor;
+
+    private boolean isNewGroup;
 
 
     @Override
@@ -70,19 +74,20 @@ public class ContactsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contacts);
 
+        Intent intent = getIntent();
+        isNewGroup = intent.getBooleanExtra("group", false);
+
+
         mFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         mFirebaseDatabase = FirebaseDatabase.getInstance();
 
         mUsersDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
 
-        if (mFirebaseUser == null) {
-            finish();
-            return;
-        }
-        pDialog = new ProgressDialog(this);
-        pDialog.setMessage("Reading contacts...");
-        pDialog.setCancelable(false);
-        pDialog.show();
+        if (mFirebaseUser == null) throw new RuntimeException("FirebaseUser is null");
+        //pDialog = new ProgressDialog(this);
+        //pDialog.setMessage("Reading contacts...");
+        //pDialog.setCancelable(false);
+        //pDialog.show();
         Timber.d("ListViewID" + findViewById(R.id.list).getId());
         mListView = findViewById(R.id.list);
         updateBarHandler = new Handler();
@@ -102,10 +107,14 @@ public class ContactsActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
                 Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
-                intent.putExtra("contactName", contactList.get(position).displayName);
-                intent.putExtra("contactUID", contactList.get(position).uid);
-                intent.putExtra("contactPhoneNumber", contactList.get(position).phoneNumber);
-                startActivity(intent);
+                if (isNewGroup) {
+                    memberList.add(contactList.get(position).phoneNumber);
+                    findViewById(R.id.doneFAB).setVisibility(View.VISIBLE);
+                } else {
+                    intent.putExtra("contactName", contactList.get(position).displayName);
+                    intent.putExtra(getString(R.string.contact_key), contactList.get(position).phoneNumber);
+                    startActivity(intent);
+                }
             }
         });
         setTitle(mFirebaseUser.getDisplayName() + "'s contacts");
@@ -135,12 +144,12 @@ public class ContactsActivity extends AppCompatActivity {
         if (requestCode == REQUEST_READ_CONTACTS) {
             if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             } else {
-                updateBarHandler.postDelayed(new Runnable() {
+                /*updateBarHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        pDialog.cancel();
+                       pDialog.cancel();
                     }
-                }, 500);
+                }, 500);*/
 
                 Snackbar.make(mListView, "This app requires the ability to read contacts",
                         Snackbar.LENGTH_SHORT).setAction("Grant", new View.OnClickListener() {
@@ -148,7 +157,7 @@ public class ContactsActivity extends AppCompatActivity {
                     public void onClick(View view) {
                         getContacts();
                     }
-                }).setAction("exit", new View.OnClickListener() {
+                }).setAction("Exit", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
                         finish();
@@ -164,9 +173,9 @@ public class ContactsActivity extends AppCompatActivity {
             return;
         }
 
-        firebaseMultiQuery = new FirebaseMultiQuery(mUsersDatabaseReference);
+        /*firebaseMultiQuery = new FirebaseMultiQuery(mUsersDatabaseReference);
         final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
-        allLoad.addOnCompleteListener(this, new AllOnCompleteListener());
+        allLoad.addOnCompleteListener(this, new AllOnCompleteListener());*/
 
         String phoneNumber;
         Uri CONTENT_URI = ContactsContract.Contacts.CONTENT_URI;
@@ -188,13 +197,12 @@ public class ContactsActivity extends AppCompatActivity {
         if (cursor == null || cursor.getCount() <= 0) return;
 
         while (cursor.moveToNext()) {
-            final Contact contact = new Contact();
             // Update the progress message
-            updateBarHandler.post(new Runnable() {
+            /*updateBarHandler.post(new Runnable() {
                 public void run() {
                     pDialog.setMessage("Reading contacts : " + counter++ + "/" + cursor.getCount());
                 }
-            });
+            });*/
             final String contact_id = cursor.getString(cursor.getColumnIndex(_ID));
             final String name = cursor.getString(cursor.getColumnIndex(DISPLAY_NAME));
             int hasPhoneNumber = Integer.parseInt(cursor.getString(cursor.getColumnIndex(HAS_PHONE_NUMBER)));
@@ -225,19 +233,20 @@ public class ContactsActivity extends AppCompatActivity {
                                 // Add the contact to the ArrayList
                                 Timber.v(finalPhoneNumber);
                                 if (dataSnapshot.getValue() == null) return;
+                                Contact contact = new Contact();
                                 contact.phoneNumber = finalPhoneNumber;
                                 contact.displayName = name;
                                 contact.uid = String.valueOf(dataSnapshot.child("uid").getValue());
                                 Timber.v("contact uid = " + contact.uid);
                                 contactList.add(contact);
 
-                                /*runOnUiThread(new Runnable() {
+                                runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
                                         ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
                                         mListView.setAdapter(adapter);
                                     }
-                                });*/
+                                });
                             }
 
                             @Override
@@ -283,6 +292,7 @@ public class ContactsActivity extends AppCompatActivity {
             Timber.v("country code: " + countryZipCode);
             phoneNumber = countryZipCode + phoneNumber;
 
+            phoneBuilder.append('+');
         }
         Timber.v("phoneNumber :" + phoneNumber);
         for (int i = 0; i < phoneNumber.length(); i++) {
@@ -291,12 +301,22 @@ public class ContactsActivity extends AppCompatActivity {
                 case ')':
                 case ' ':
                 case '-':
-                    continue;
+                    break;
                 default:
                     phoneBuilder.append(phoneNumber.charAt(i));
             }
         }
         return phoneBuilder.toString();
+    }
+
+    public void doneFAB(View view) {
+        Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
+        intent.putExtra("contactName", "group");
+        intent.putExtra("memberList", memberList);
+        intent.putExtra("isGroup", true);
+        intent.putExtra("isNewGroup", true);
+        startActivity(intent);
+        ContactsActivity.this.finish();
     }
 
     @Override
@@ -371,7 +391,7 @@ public class ContactsActivity extends AppCompatActivity {
                     task.getException().printStackTrace();
                 // log the error or whatever you need to do
             }
-            runOnUiThread(new Runnable() {
+            /*runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
@@ -384,10 +404,9 @@ public class ContactsActivity extends AppCompatActivity {
                 public void run() {
                     pDialog.cancel();
                 }
-            }, 500);
+            }, 500);*/
 
         }
     }
 
 }
-

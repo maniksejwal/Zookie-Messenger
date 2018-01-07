@@ -75,8 +75,9 @@
 
         <service android:name=".Old.services.IMService" />
 
-        <activity android:name=".Chats"></activity>
+        <activity android:name=".Chats" />
         <activity android:name=".GroupChatScreen" />
+        <activity android:name=".PollActivity"></activity>
     </application>
 
 </manifest>

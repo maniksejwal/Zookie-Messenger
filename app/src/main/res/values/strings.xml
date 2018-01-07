@@ -332,8 +332,24 @@
 
     </string-array>
 
+    <!--Constants for app and database. Avoid changing their values-->
     <string name="users">user</string>
     <string name="messages">messages</string>
     <string name="chats">chats</string>
+    <string name="new_group">New group</string>
+    <string name="poll_title">Poll title</string>
+    <string name="poll_details">Details of the poll (optional)</string>
+    <string name="option_name">Option name</string>
+    <string name="new_poll_option">New Option</string>
+    <string name="clear_vote">Clear vote</string>
+    <string name="done">Done</string>
+    <string name="new_poll">New poll</string>
+    <string name="polls">polls</string>
+    <string name="options">options</string>
+    <string name="contact_key">contactPhoneNumber</string>
+    <string name="meta">meta</string>
+    <string name="type">type</string>
+    <string name="group">group</string>
+    <string name="admin">admin</string>
 
 </resources>

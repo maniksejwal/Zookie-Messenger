@@ -201,6 +201,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         };
         // [END phone_auth_callbacks]
+
+        mFirebaseDatabase.setPersistenceEnabled(true);
     }
 
     // [START on_start_check_user]
