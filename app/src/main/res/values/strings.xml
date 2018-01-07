@@ -351,5 +351,7 @@
     <string name="type">type</string>
     <string name="group">group</string>
     <string name="admin">admin</string>
+    <string name="option_first_cap">Option</string>
+    <string name="vote_count">Vote count</string>
 
 </resources>

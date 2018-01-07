@@ -125,7 +125,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // [START initialize_auth]
         mAuth = FirebaseAuth.getInstance();
+        if (mFirebaseDatabase == null) {
         mFirebaseDatabase = FirebaseDatabase.getInstance();
+            mFirebaseDatabase.setPersistenceEnabled(true);
+        }
         mUsersDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
 
         // [END initialize_auth]
@@ -201,8 +204,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         };
         // [END phone_auth_callbacks]
-
-        mFirebaseDatabase.setPersistenceEnabled(true);
     }
 
     // [START on_start_check_user]
@@ -299,8 +300,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     childUpdates.put("displayName",
                                             mNameField.getText().toString());
                                     childUpdates.put("uid", mUser.getUid());
+
                                     mUsersDatabaseReference.child(mUser.getPhoneNumber())
                                             .updateChildren(childUpdates);
+
+                                    mUsersDatabaseReference.child(mUser.getPhoneNumber())
+                                            .keepSynced(true);
 
                                     Intent i = new Intent(getApplicationContext(), Chats.class);
                                     startActivity(i);

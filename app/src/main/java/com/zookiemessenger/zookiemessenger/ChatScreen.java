@@ -205,8 +205,8 @@ public class ChatScreen extends AppCompatActivity {
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.setType("image/jpeg");
                 intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                startActivityForResult(Intent.createChooser(
-                        intent, "Complete action using"), RC_PHOTO_PICKER);
+                startActivityForResult(Intent.createChooser(intent,
+                        "Complete action using"), RC_PHOTO_PICKER);
             }
         });
 
@@ -243,6 +243,7 @@ public class ChatScreen extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
+        mChatsDatabaseReference.child(mChatKey).keepSynced(true);
     }
 
     private void attachDatabaseReadListener() {

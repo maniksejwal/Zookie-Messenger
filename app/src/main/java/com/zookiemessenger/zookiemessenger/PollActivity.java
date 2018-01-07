@@ -4,11 +4,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -191,7 +193,10 @@ public class PollActivity extends AppCompatActivity {
             }
         });
 
-        if (!newPoll) setOptions();
+        if (!newPoll) {
+            setOptions();
+            result();
+        }
     }
 
     private void newPollOption() {
@@ -265,7 +270,7 @@ public class PollActivity extends AppCompatActivity {
                 castVote();
             }
             finish();
-        } else castVote();
+        }
     }
 
 
@@ -276,6 +281,7 @@ public class PollActivity extends AppCompatActivity {
 
         setTextViews();
         setOptions();
+        result();
     }
 
     private void setTextViews() {
@@ -396,5 +402,26 @@ public class PollActivity extends AppCompatActivity {
         }
     }
 
-//TODO: get result
+    private void result() {
+        mPollDatabaseReference.child(getString(R.string.options)).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot option : dataSnapshot.getChildren()) {
+                    View view = LayoutInflater.from(getApplicationContext())
+                            .inflate(R.layout.result_item, null, false);
+                    Timber.v("option" + option.getKey());
+                    ((TextView) view.findViewById(R.id.option_name)).setText(option.getKey());
+                    ((TextView) view.findViewById(R.id.option_voter_count))
+                            .setText(String.valueOf(option.getChildrenCount()));
+                    ((LinearLayout) findViewById(R.id.score_layout)).addView(view);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+            }
+        });
+    }
+
+    //TODO: close poll
 }

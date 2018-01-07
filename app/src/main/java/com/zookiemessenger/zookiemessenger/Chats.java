@@ -71,7 +71,7 @@ public class Chats extends AppCompatActivity {
 
         mUserDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users) + "/" + mFirebaseUser.getPhoneNumber());
         mChatsDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.chats));
-
+        mChatsDatabaseReference.keepSynced(true);
 
         //pDialog = new ProgressDialog(this);
         //pDialog.setCancelable(false);
@@ -188,7 +188,6 @@ public class Chats extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (firebaseMultiQuery != null) firebaseMultiQuery.stop();
     }
 
     @Override
