@@ -13,11 +13,14 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+
 import java.util.List;
 
 
 public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
     private String mChatKey, mUserPhoneNumber;
+
     public MessageAdapter(Context context, int resource, List<FriendlyMessage> objects,
                           String userPhoneNumber, String chatKey) {
         super(context, resource, objects);
@@ -41,28 +44,31 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
 
         switch (type) {
             case "poll":
-            messageTextView.setVisibility(View.VISIBLE);
-            photoImageView.setVisibility(View.GONE);
-            messageTextView.setText(message.getText());
-            convertView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Intent intent = new Intent(getContext(), PollActivity.class);
-                    intent.putExtra("pollKey", message.getUrl());
-                    intent.putExtra("chatKey", mChatKey);
-                    intent.putExtra("userPhoneNumber", mUserPhoneNumber);
-                    getContext().startActivity(intent);
-                }
-            });
+                messageTextView.setVisibility(View.VISIBLE);
+                photoImageView.setVisibility(View.GONE);
+                messageTextView.setText(message.getText());
+                convertView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        Intent intent = new Intent(getContext(), PollActivity.class);
+                        intent.putExtra("pollKey", message.getUrl());
+                        intent.putExtra("chatKey", mChatKey);
+                        intent.putExtra("userPhoneNumber", mUserPhoneNumber);
+                        getContext().startActivity(intent);
+                    }
+                });
                 break;
             case "image":
-            messageTextView.setVisibility(View.GONE);
-            photoImageView.setVisibility(View.VISIBLE);
+                Glide.with(photoImageView.getContext())
+                        .load(message.getUrl())
+                        .into(photoImageView);
+                messageTextView.setVisibility(View.GONE);
+                photoImageView.setVisibility(View.VISIBLE);
                 break;
             default:
-            messageTextView.setVisibility(View.VISIBLE);
-            photoImageView.setVisibility(View.GONE);
-            messageTextView.setText(message.getText());
+                messageTextView.setVisibility(View.VISIBLE);
+                photoImageView.setVisibility(View.GONE);
+                messageTextView.setText(message.getText());
         }
 
         authorTextView.setText(message.getName());

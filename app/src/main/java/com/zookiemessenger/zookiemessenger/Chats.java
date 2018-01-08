@@ -292,4 +292,4 @@ public class Chats extends AppCompatActivity {
     }
 }
 
-//TODO: new group in menu
+//TODO: delete chats

@@ -175,8 +175,6 @@ public class ChatScreen extends AppCompatActivity {
                         }
                     });
         }
-
-
         setLayout();
     }
 
@@ -251,6 +249,7 @@ public class ChatScreen extends AppCompatActivity {
         mChildEventListener = new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                Timber.v("" + dataSnapshot.getValue());
                 FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
                 mMessageAdapter.add(friendlyMessage);
             }
@@ -324,7 +323,8 @@ public class ChatScreen extends AppCompatActivity {
                             // Set the download URL to the message box, so that the user can send it to the database
                             FriendlyMessage friendlyMessage = new FriendlyMessage(null
                                     , mUserPhoneNumber, "image", downloadUrl.toString());
-                            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).setValue(friendlyMessage);
+                            Timber.v("mChatKey " + mChatKey);
+                            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
                         }
                     });
         }
