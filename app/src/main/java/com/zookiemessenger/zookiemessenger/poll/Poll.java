@@ -1,4 +1,4 @@
-package com.zookiemessenger.zookiemessenger;
+package com.zookiemessenger.zookiemessenger.poll;
 
 import android.widget.EditText;
 import android.widget.RadioButton;

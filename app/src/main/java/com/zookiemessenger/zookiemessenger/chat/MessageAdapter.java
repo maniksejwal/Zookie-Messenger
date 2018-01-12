@@ -1,4 +1,4 @@
-package com.zookiemessenger.zookiemessenger;
+package com.zookiemessenger.zookiemessenger.chat;
 
 /**
  * Created by manik on 1/1/18.
@@ -14,6 +14,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.zookiemessenger.zookiemessenger.poll.PollActivity;
+import com.zookiemessenger.zookiemessenger.R;
 
 import java.util.List;
 

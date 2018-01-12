@@ -1,14 +1,17 @@
-package com.zookiemessenger.zookiemessenger;
+package com.zookiemessenger.zookiemessenger.contacts;
 
+import android.app.LoaderManager;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -34,6 +37,11 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.zookiemessenger.zookiemessenger.FirebaseMultiQuery;
+import com.zookiemessenger.zookiemessenger.MainActivity;
+import com.zookiemessenger.zookiemessenger.R;
+import com.zookiemessenger.zookiemessenger.chat.ChatScreen;
+import com.zookiemessenger.zookiemessenger.contacts.ContactContract.ContactEntry;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -46,18 +54,20 @@ import static android.Manifest.permission.READ_CONTACTS;
  * Created by manik on 25/12/17.
  */
 
-public class ContactsActivity extends AppCompatActivity {
+public class ContactsActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
     private static final int REQUEST_READ_CONTACTS = 444;
     private static final int LOG_OUT_ID = Menu.FIRST;
 
     private ListView mListView;
     //private ProgressDialog pDialog;
-    private Handler updateBarHandler;
+    //private Handler updateBarHandler;
     ArrayList<Contact> contactList = new ArrayList<>();
     ArrayList<String> memberList = new ArrayList<>();
 
     Cursor cursor;
     Cursor mPhoneCursor;
+    private static final int CONTACT_LOADER = 0;
+    ContactsCursorAdapter mCursorAdapter;
     int counter;
 
     FirebaseUser mFirebaseUser;
@@ -90,7 +100,10 @@ public class ContactsActivity extends AppCompatActivity {
         //pDialog.show();
         Timber.d("ListViewID" + findViewById(R.id.list).getId());
         mListView = findViewById(R.id.list);
-        updateBarHandler = new Handler();
+        mCursorAdapter = new ContactsCursorAdapter(this, null);
+        getLoaderManager().initLoader(CONTACT_LOADER, null, this);
+        mListView.setAdapter(mCursorAdapter);
+        //updateBarHandler = new Handler();
         // Since reading contacts takes more time, let's run it on a separate thread.
         new Thread(new Runnable() {
             @Override
@@ -169,9 +182,7 @@ public class ContactsActivity extends AppCompatActivity {
 
     private void getContacts() {
         Timber.v("getContacts");
-        if (!mayRequestContacts()) {
-            return;
-        }
+        if (!mayRequestContacts()) return;
 
         /*firebaseMultiQuery = new FirebaseMultiQuery(mUsersDatabaseReference);
         final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
@@ -179,7 +190,7 @@ public class ContactsActivity extends AppCompatActivity {
 
         String phoneNumber;
         Uri CONTENT_URI = ContactsContract.Contacts.CONTENT_URI;
-        String _ID = ContactsContract.Contacts._ID;
+        final String _ID = ContactsContract.Contacts._ID;
         String DISPLAY_NAME = ContactsContract.Contacts.DISPLAY_NAME;
         String HAS_PHONE_NUMBER = ContactsContract.Contacts.HAS_PHONE_NUMBER;
         Uri PhoneCONTENT_URI = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
@@ -209,7 +220,8 @@ public class ContactsActivity extends AppCompatActivity {
             if (hasPhoneNumber <= 0) continue;
 
             //This is to read multiple phone numbers associated with the same contact
-            mPhoneCursor = contentResolver.query(PhoneCONTENT_URI, null, Phone_CONTACT_ID + " = ?", new String[]{contact_id}, null);
+            mPhoneCursor = contentResolver.query(PhoneCONTENT_URI, null,
+                    Phone_CONTACT_ID + " = ?", new String[]{contact_id}, null);
             if (mPhoneCursor == null) continue;
 
             while (mPhoneCursor.moveToNext()) {
@@ -222,7 +234,6 @@ public class ContactsActivity extends AppCompatActivity {
                 //        || mt == PhoneNumberUtil.MatchType.EXACT_MATCH) continue;
                 //previous = phoneNumber;
                 //Contact.reference().child(userPhone).observe(.value, with: { snapshot in }
-
 
                 final String finalPhoneNumber = getTelephone(phoneNumber);
                 Timber.v("finalPhoneNumber " + finalPhoneNumber);
@@ -240,13 +251,40 @@ public class ContactsActivity extends AppCompatActivity {
                                 Timber.v("contact uid = " + contact.uid);
                                 contactList.add(contact);
 
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
-                                        mListView.setAdapter(adapter);
+                                ContentValues values = new ContentValues();
+                                values.put(ContactEntry.COLUMN_CONTACT_NAME, name);
+                                values.put(ContactEntry.COLUMN_CONTACT_PHONE_NUMBER, finalPhoneNumber);
+                                Cursor c = getContentResolver().query(ContactEntry.CONTENT_URI,
+                                        new String[]{
+                                                ContactEntry._ID,
+                                                ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
+                                                ContactEntry.COLUMN_CONTACT_NAME},
+                                        ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
+                                        new String[]{finalPhoneNumber},
+                                        null
+                                );
+
+                                try{
+                                    getContentResolver().insert(ContactEntry.CONTENT_URI, values);
+                                } catch (Exception e) {
+                                    values = new ContentValues();
+                                    values.put(ContactEntry.COLUMN_CONTACT_NAME, name);
+                                    try {
+                                        getContentResolver().update(ContactEntry.CONTENT_URI,
+                                                values,
+                                                "ContactEntry.COLUMN_CONTACT_PHONE_NUMBER = "
+                                                        + finalPhoneNumber,
+                                                null
+                                        );
+                                    } catch (Exception exception) {
+                                        //exception.printStackTrace();
                                     }
-                                });
+                                }
+
+                                if (c != null) c.close();
+
+                                //mListView.setAdapter(mCursorAdapter);
+                                mCursorAdapter.notifyDataSetChanged();
                             }
 
                             @Override
@@ -256,21 +294,6 @@ public class ContactsActivity extends AppCompatActivity {
             }
             mPhoneCursor.close();
         }
-        /*// ListView has to be updated using a ui thread
-        runOnUiThread(new Runnable(-) {
-            @Override
-            public void run() {
-                ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
-                mListView.setAdapter(adapter);
-            }
-        });
-        // Dismiss the progressbar after 500 milliseconds
-        updateBarHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                pDialog.cancel();
-            }
-        }, 500);*/
     }
 
     private String getTelephone(String phoneNumber) {
@@ -344,6 +367,27 @@ public class ContactsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
+        String[] projection = {
+                ContactEntry._ID,
+                ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
+                ContactEntry.COLUMN_CONTACT_NAME
+        };
+        return new CursorLoader(this, ContactEntry.CONTENT_URI, projection, null, null, null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        mCursorAdapter.swapCursor(cursor);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        mCursorAdapter.swapCursor(null);
+    }
+
     private class Contact {
         String displayName, phoneNumber, uid;
     }
@@ -408,5 +452,6 @@ public class ContactsActivity extends AppCompatActivity {
 
         }
     }
-
 }
+
+//TODO: implement name changes

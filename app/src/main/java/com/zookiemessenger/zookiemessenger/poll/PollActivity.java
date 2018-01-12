@@ -1,4 +1,4 @@
-package com.zookiemessenger.zookiemessenger;
+package com.zookiemessenger.zookiemessenger.poll;
 
 import android.content.Context;
 import android.content.Intent;
@@ -20,6 +20,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.zookiemessenger.zookiemessenger.R;
+import com.zookiemessenger.zookiemessenger.chat.FriendlyMessage;
 
 import timber.log.Timber;
 

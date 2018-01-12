@@ -2,6 +2,8 @@ package com.zookiemessenger.zookiemessenger;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -31,6 +33,7 @@ import com.google.firebase.auth.PhoneAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.zookiemessenger.zookiemessenger.contacts.ContactsActivity;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,11 +41,14 @@ import java.util.concurrent.TimeUnit;
 
 import timber.log.Timber;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+import static android.Manifest.permission.READ_CONTACTS;
 
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "PhoneAuthActivity";
 
     private static final String KEY_VERIFY_IN_PROGRESS = "key_verify_in_progress";
+
+    private static final int REQUEST_READ_CONTACTS = 444;
 
     private static final int STATE_INITIALIZED = 1;
     private static final int STATE_CODE_SENT = 2;
@@ -53,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private FirebaseAuth mAuth;
     private FirebaseDatabase mFirebaseDatabase;
+    private FirebaseUser mUser;
 
     private DatabaseReference mUsersDatabaseReference;
 
@@ -76,7 +83,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button mResendButton;
     private Button mSignOutButton;
 
-    FirebaseUser mUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,8 +132,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // [START initialize_auth]
         mAuth = FirebaseAuth.getInstance();
         if (mFirebaseDatabase == null) {
-        mFirebaseDatabase = FirebaseDatabase.getInstance();
-            mFirebaseDatabase.setPersistenceEnabled(true);
+            mFirebaseDatabase = FirebaseDatabase.getInstance();
+            try {
+                mFirebaseDatabase.setPersistenceEnabled(true);
+            } catch (Exception e){
+                //e.printStackTrace
+            }
         }
         mUsersDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
 
@@ -210,6 +220,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onStart() {
         super.onStart();
+
         // Check if mFirebaseUser is signed in (non-null) and update UI accordingly.
         FirebaseUser currentUser = mAuth.getCurrentUser();
         updateUI(currentUser);
@@ -219,8 +230,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             startPhoneNumberVerification(mPhoneNumberField.getText().toString());
         }
         // [END_EXCLUDE]
-
-
     }
     // [END on_start_check_user]
 
@@ -307,7 +316,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     mUsersDatabaseReference.child(mUser.getPhoneNumber())
                                             .keepSynced(true);
 
-                                    Intent i = new Intent(getApplicationContext(), Chats.class);
+                                    Intent i = new Intent(getApplicationContext(), ContactsActivity.class);
                                     startActivity(i);
                                     MainActivity.this.finish();
                                 }
@@ -399,21 +408,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case STATE_SIGNIN_SUCCESS:
                 Timber.d("updateUI() case STATE_SIGN_SUCCESS");
 
-                if (user != null) {
-                    //UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                    //      .setDisplayName(mNameField
-                    //            .getText().toString()).build();
-                    //mFirebaseUser.updateProfile(profileUpdates);
-                    user.reload();
-                    Intent i = new Intent(getApplicationContext(), Chats.class);
-                    //i.putExtra(FRIEND_LIST, result);
-                    Timber.v("logged in, starting contactsActivity");
-                    startActivity(i);
-                    MainActivity.this.finish();
-                    // Np-op, handled by sign-in check
-                    break;
-                } else {
-                    Timber.e("updateUI() case STATE_SIGN_SUCCESS mFirebaseUser is null");
+                if (mayRequestContacts()) {
+
+                    if (user != null) {
+                        //UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                        //      .setDisplayName(mNameField
+                        //            .getText().toString()).build();
+                        //mFirebaseUser.updateProfile(profileUpdates);
+                        user.reload();
+                        Intent i = new Intent(getApplicationContext(), Chats.class);
+                        //i.putExtra(FRIEND_LIST, result);
+                        Timber.v("logged in, starting contactsActivity");
+                        startActivity(i);
+                        MainActivity.this.finish();
+                        // Np-op, handled by sign-in check
+                        break;
+                    } else {
+                        Timber.e("updateUI() case STATE_SIGN_SUCCESS mFirebaseUser is null");
+                    }
                 }
         }
 
@@ -435,6 +447,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mStatusText.setText(R.string.signed_in);
             mDetailText.setText(getString(R.string.firebase_status_fmt, user.getUid()));
         }
+    }
+
+    private boolean mayRequestContacts() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+        if (checkSelfPermission(READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+            return true;
+        }
+        if (shouldShowRequestPermissionRationale(READ_CONTACTS)) {
+            requestPermissions(new String[]{READ_CONTACTS}, REQUEST_READ_CONTACTS);
+        } else {
+            requestPermissions(new String[]{READ_CONTACTS}, REQUEST_READ_CONTACTS);
+        }
+        return false;
     }
 
     private boolean validatePhoneNumber() {
@@ -487,28 +514,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
-
-    /*private class AllOnCompleteListener implements OnCompleteListener<Map<DatabaseReference, DataSnapshot>> {
-        @Override
-        public void onComplete(@NonNull Task<Map<DatabaseReference, DataSnapshot>> task) {
-            if (task.isSuccessful()) {
-                final Map<DatabaseReference, DataSnapshot> result = task.getResult();
-                // Look up DataSnapshot objects using the same DatabaseReferences you passed into FirebaseMultiQuery
-            } else {
-                if (task.getException() != null)
-                    task.getException().printStackTrace();
-                // log the error or whatever you need to do
-            }
-            // Do stuff with views
-            //Timber.v(user.getDisplayName());
-            // [START_EXCLUDE]
-            //updateUI(STATE_SIGNIN_SUCCESS, mFirebaseUser);
-
-        }
-    }*/
-
 }
 
 //TODO: handle failed network
 //TODO: Handle wrong verification code
 //TODO: Handle onPause and onStart
+//TODO: open chats on permission granted

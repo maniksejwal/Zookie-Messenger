@@ -1,4 +1,4 @@
-package com.zookiemessenger.zookiemessenger;
+package com.zookiemessenger.zookiemessenger.chat;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -29,6 +29,8 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.zookiemessenger.zookiemessenger.poll.PollActivity;
+import com.zookiemessenger.zookiemessenger.R;
 
 import java.util.ArrayList;
 import java.util.List;

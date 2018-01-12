@@ -1,4 +1,4 @@
-package com.zookiemessenger.zookiemessenger;
+package com.zookiemessenger.zookiemessenger.chat;
 
 /**
  * Created by manik on 1/1/18.
