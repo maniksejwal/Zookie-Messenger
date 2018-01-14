@@ -46,7 +46,7 @@ public class ContactProvider extends ContentProvider{
         int match = sUriMatcher.match(uri);
         switch (match) {
             case CONTACTS:
-                cursor = database.query(ContactEntry.TABLE_NAME, null, null, null, null, null, null);
+                cursor = database.query(ContactEntry.TABLE_NAME, projection, selection, null, null, null, null);
                 break;
             default:
                 throw new IllegalArgumentException("Cannot query unknown URI " + uri);
@@ -107,7 +107,7 @@ public class ContactProvider extends ContentProvider{
         if (values.containsKey(ContactEntry.COLUMN_CONTACT_PHONE_NUMBER)) {
             String phoneNumber = values.getAsString(ContactEntry.COLUMN_CONTACT_PHONE_NUMBER);
             if (phoneNumber == null) {
-                throw new IllegalArgumentException("Contact requires valid gender");
+                throw new IllegalArgumentException("Contact requires valid phone number");
             }
         }
 

@@ -132,19 +132,33 @@ public class Chats extends AppCompatActivity {
         final Chat chat = new Chat(childSnapshot.getKey(),
                 childSnapshot.getValue() + "", "" + type.getValue());
         if (!chat.type.equals(getString(R.string.group))) {
+            Timber.v("phoneNumber " + chat.phoneNumber);
+            Timber.v("type " + chat.type);
+            String st = ContactEntry.COLUMN_CONTACT_PHONE_NUMBER + "='" + chat.phoneNumber + "'";
+            Timber.v("selection " + st);
             Cursor c = getContentResolver().query(ContactEntry.CONTENT_URI,
                     new String[]{
-                            ContactEntry._ID,
-                            ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
+                            //ContactEntry._ID,
+                            //ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
                             ContactEntry.COLUMN_CONTACT_NAME
                     },
-                    ContactEntry.COLUMN_CONTACT_PHONE_NUMBER + " = ?",
-                    new String[]{chat.phoneNumber},
+                    st,
+                    null,
                     null
-                    //ContactEntry.COLUMN_CONTACT_PHONE_NUMBER + " ASC"
             );
 
-            updateAdapter(c.getString(c.getColumnIndex(ContactEntry.COLUMN_CONTACT_NAME)), chat);
+            int index = c.getColumnIndex(ContactEntry.COLUMN_CONTACT_NAME);
+            String s = "";
+
+            if (c.moveToFirst()) {
+                s = c.getString(index);
+                do {
+                    Timber.v("contact name " + c.getString(index));
+                } while (c.moveToNext());
+            }
+
+            updateAdapter(s, chat);
+            c.close();
         } else {
             mChatsDatabaseReference.child(childSnapshot.getKey() + "/" + getString(R.string.meta)
                     + "/" + getString(R.string.name)).addListenerForSingleValueEvent(

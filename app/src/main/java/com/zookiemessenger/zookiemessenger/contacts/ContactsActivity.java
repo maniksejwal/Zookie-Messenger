@@ -126,6 +126,7 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
                     intent.putExtra("contactName", contactList.get(position).displayName);
                     intent.putExtra(getString(R.string.contact_key), contactList.get(position).phoneNumber);
                     startActivity(intent);
+                    finish();
                 }
             }
         });
@@ -234,65 +235,45 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
                 //previous = phoneNumber;
                 //Contact.reference().child(userPhone).observe(.value, with: { snapshot in }
 
-                final String finalPhoneNumber = getTelephone(phoneNumber);
-                Timber.v("finalPhoneNumber " + finalPhoneNumber);
-                mUsersDatabaseReference.child(finalPhoneNumber)
-                        .addListenerForSingleValueEvent(new ValueEventListener() {
-                            @Override
-                            public void onDataChange(DataSnapshot dataSnapshot) {
-                                // Add the contact to the ArrayList
-                                Timber.v(finalPhoneNumber);
-                                if (dataSnapshot.getValue() == null) return;
-                                Contact contact = new Contact();
-                                contact.phoneNumber = finalPhoneNumber;
-                                contact.displayName = name;
-                                contact.uid = String.valueOf(dataSnapshot.child("uid").getValue());
-                                Timber.v("contact uid = " + contact.uid);
-                                contactList.add(contact);
-
-                                ContentValues values = new ContentValues();
-                                values.put(ContactEntry.COLUMN_CONTACT_NAME, name);
-                                values.put(ContactEntry.COLUMN_CONTACT_PHONE_NUMBER, finalPhoneNumber);
-                                Cursor c = getContentResolver().query(ContactEntry.CONTENT_URI,
-                                        new String[]{
-                                                ContactEntry._ID,
-                                                ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
-                                                ContactEntry.COLUMN_CONTACT_NAME},
-                                        ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
-                                        new String[]{finalPhoneNumber},
-                                        null
-                                );
-
-                                try{
-                                    getContentResolver().insert(ContactEntry.CONTENT_URI, values);
-                                } catch (Exception e) {
-                                    values = new ContentValues();
-                                    values.put(ContactEntry.COLUMN_CONTACT_NAME, name);
-                                    try {
-                                        getContentResolver().update(ContactEntry.CONTENT_URI,
-                                                values,
-                                                "ContactEntry.COLUMN_CONTACT_PHONE_NUMBER = "
-                                                        + finalPhoneNumber,
-                                                null
-                                        );
-                                    } catch (Exception exception) {
-                                        //exception.printStackTrace();
-                                    }
-                                }
-
-                                if (c != null) c.close();
-
-                                //mListView.setAdapter(mCursorAdapter);
-                                mCursorAdapter.notifyDataSetChanged();
-                            }
-
-                            @Override
-                            public void onCancelled(DatabaseError databaseError) {
-                            }
-                        });
+                checkPhoneNumber(phoneNumber, name);
             }
             mPhoneCursor.close();
         }
+    }
+
+    private void checkPhoneNumber(String phoneNumber, final String name) {
+
+        final String finalPhoneNumber = getTelephone(phoneNumber);
+        Timber.v("finalPhoneNumber " + finalPhoneNumber);
+
+        mUsersDatabaseReference.child(finalPhoneNumber)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        // Add the contact to the ArrayList
+                        Timber.v(finalPhoneNumber);
+                        if (dataSnapshot.getValue() == null) return;
+                        Contact contact = new Contact();
+                        contact.phoneNumber = finalPhoneNumber;
+                        contact.displayName = name;
+                        contact.uid = String.valueOf(dataSnapshot.child("uid").getValue());
+                        Timber.v("contact uid = " + contact.uid);
+                        contactList.add(contact);
+
+                        ContentValues values = new ContentValues();
+                        values.put(ContactEntry.COLUMN_CONTACT_NAME, name);
+                        values.put(ContactEntry.COLUMN_CONTACT_PHONE_NUMBER, finalPhoneNumber);
+                        getContentResolver().insert(ContactEntry.CONTENT_URI, values);
+
+                        //mListView.setAdapter(mCursorAdapter);
+                        mCursorAdapter.notifyDataSetChanged();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                    }
+                });
+
     }
 
     private String getTelephone(String phoneNumber) {
