@@ -37,7 +37,6 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.zookiemessenger.zookiemessenger.FirebaseMultiQuery;
 import com.zookiemessenger.zookiemessenger.MainActivity;
 import com.zookiemessenger.zookiemessenger.R;
 import com.zookiemessenger.zookiemessenger.chat.ChatScreen;
@@ -74,7 +73,7 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
     FirebaseDatabase mFirebaseDatabase;
     DatabaseReference mUsersDatabaseReference;
 
-    FirebaseMultiQuery firebaseMultiQuery;
+    //FirebaseMultiQuery firebaseMultiQuery;
 
     private boolean isNewGroup;
 
@@ -345,7 +344,7 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (firebaseMultiQuery != null) firebaseMultiQuery.stop();
+        //if (firebaseMultiQuery != null) firebaseMultiQuery.stop();
     }
 
     @Override
@@ -366,7 +365,6 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
         }
         return super.onOptionsItemSelected(item);
     }
-
 
     @Override
     public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {

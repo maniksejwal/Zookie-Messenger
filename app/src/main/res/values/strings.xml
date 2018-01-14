@@ -353,5 +353,6 @@
     <string name="admin">admin</string>
     <string name="option_first_cap">Option</string>
     <string name="vote_count">Vote count</string>
+    <string name="name">name</string>
 
 </resources>

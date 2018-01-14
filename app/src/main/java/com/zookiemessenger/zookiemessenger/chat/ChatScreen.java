@@ -97,71 +97,12 @@ public class ChatScreen extends AppCompatActivity {
 
         mUserPhoneNumber = mFirebaseUser.getPhoneNumber();
 
-        if (mType.equals("group")) {
+        if (mType != null && mType.equals("group")) {
             mChatKey = mContactKey;
             isGroup = true;
         }
-        mUserDatabaseReference.child(mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactKey)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        Timber.v("value " + dataSnapshot.getValue());
 
-                        if (isNewGroup) {
-                            //make a chat key
-                            mChatKey = mChatsDatabaseReference.push().getKey();
-                            Timber.v("mChatKey: " + mChatKey);
-                            String groupKey = mChatKey; // DO NOT TOUCH THIS!!!!!!!!!!
-                            Timber.v(groupKey);         // it handles null value due to delay in contacting the server
-
-                            //mUserDatabaseReference.child(mUserPhoneNumber + "/" + getString(R.string.chats) + "/"
-                            //        + mChatKey).setValue(mChatKey);
-
-                            Timber.v("group member list\t" + mGroupMemberList);
-
-                            mGroupMemberList.add(mUserPhoneNumber);
-                            //Send chatKey to members
-                            for (String member : mGroupMemberList)
-                                mUserDatabaseReference.child(member + "/" + getString(R.string.chats) +
-                                        "/" + mChatKey).setValue(mChatKey);
-
-                            //Add members to chat
-                            mChatsDatabaseReference.child(mChatKey + "/" + "members")
-                                    .setValue(mGroupMemberList);
-
-                            //Add meta
-                            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
-                                    "/" + getString(R.string.type)).setValue(getString(R.string.group));
-
-                            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
-                                    "/" + getString(R.string.admin)).push().setValue(mUserPhoneNumber);
-
-                            isAdmin = true;
-                        } else if (dataSnapshot.getValue() == null) {
-                            //make a chat key and add to the users
-                            mChatKey = mChatsDatabaseReference.push().getKey();
-                            Timber.v("mChatKey: " + mChatKey);
-
-                            mUserDatabaseReference.child(
-                                    mContactKey + "/" + getString(R.string.chats) + "/" + mUserPhoneNumber)
-                                    .setValue(mChatKey);
-                            mUserDatabaseReference.child(
-                                    mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactKey)
-                                    .setValue(mChatKey);
-
-                            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
-                                    "/" + getString(R.string.type)).setValue("normal");
-
-                        } else mChatKey = String.valueOf(dataSnapshot.getValue());
-
-                        attachDatabaseReadListener();
-                    }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-
-                    }
-                });
+        getChatKey();
 
         if (isGroup && !isAdmin) {
             mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) + "/" + getString(R.string.admin))
@@ -180,7 +121,92 @@ public class ChatScreen extends AppCompatActivity {
         setLayout();
     }
 
-    void setLayout() {
+    private void getChatKey() {
+        mUserDatabaseReference.child(mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactKey)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        Timber.v("isNewGroup" + isNewGroup);
+                        Timber.v("setting chat " + dataSnapshot.getValue());
+
+                        if (isNewGroup) newGroup();
+                        else if (dataSnapshot.getValue() == null) {
+                            newPrivateChat();
+                        } else {
+                            getChat(dataSnapshot);
+                        }
+
+                        attachDatabaseReadListener();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
+    }
+
+    private void newGroup() {
+        //make a chat key
+        mChatKey = mChatsDatabaseReference.push().getKey();
+        Timber.v("mChatKey: " + mChatKey);
+        String groupKey = mChatKey; // DO NOT TOUCH THIS!!!!!!!!!!
+        Timber.v(groupKey);         // it handles null value due to delay in contacting the server
+
+        //mUserDatabaseReference.child(mUserPhoneNumber + "/" + getString(R.string.chats) + "/"
+        //        + mChatKey).setValue(mChatKey);
+
+        Timber.v("group member list\t" + mGroupMemberList);
+
+        mGroupMemberList.add(mUserPhoneNumber);
+        //Send chatKey to members
+        for (String member : mGroupMemberList)
+            mUserDatabaseReference.child(member + "/" + getString(R.string.chats) +
+                    "/" + mChatKey).setValue(mChatKey);
+
+        //Add members to chat
+        mChatsDatabaseReference.child(mChatKey + "/" + "members")
+                .setValue(mGroupMemberList);
+
+        //Add meta
+        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
+                "/" + getString(R.string.type)).setValue(getString(R.string.group));
+
+        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
+                "/" + getString(R.string.admin)).push().setValue(mUserPhoneNumber);
+
+        isAdmin = true;
+
+        mChatsDatabaseReference.child(mChatKey).keepSynced(true);
+    }
+
+    private void newPrivateChat() {
+        //make a chat key
+        mChatKey = mChatsDatabaseReference.push().getKey();
+        Timber.v("mChatKey: " + mChatKey);
+
+        mUserDatabaseReference.child(
+                mContactKey + "/" + getString(R.string.chats) + "/" + mUserPhoneNumber)
+                .setValue(mChatKey);
+        mUserDatabaseReference.child(
+                mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactKey)
+                .setValue(mChatKey);
+
+        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
+                "/" + getString(R.string.type)).setValue("normal");
+
+        mChatsDatabaseReference.child(mChatKey).keepSynced(true);
+    }
+
+    private void getChat(DataSnapshot dataSnapshot) {
+        Timber.v("not a new chat");
+        mChatKey = String.valueOf(dataSnapshot.getValue());
+        Timber.v("mChatKey: " + mChatKey);
+
+        mChatsDatabaseReference.child(mChatKey).keepSynced(true);
+    }
+
+    private void setLayout() {
         setTitle(mContactName);
         // Initialize references to views
         mProgressBar = findViewById(R.id.progressBar);
@@ -243,8 +269,8 @@ public class ChatScreen extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
-        mChatsDatabaseReference.child(mChatKey).keepSynced(true);
     }
+
 
     private void attachDatabaseReadListener() {
         if (mChildEventListener != null) return;
@@ -278,6 +304,7 @@ public class ChatScreen extends AppCompatActivity {
             mChildEventListener = null;
         }
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

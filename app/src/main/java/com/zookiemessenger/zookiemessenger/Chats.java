@@ -1,13 +1,10 @@
 package com.zookiemessenger.zookiemessenger;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
@@ -21,8 +18,6 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -31,15 +26,14 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.zookiemessenger.zookiemessenger.chat.ChatScreen;
+import com.zookiemessenger.zookiemessenger.contacts.ContactContract.ContactEntry;
 import com.zookiemessenger.zookiemessenger.contacts.ContactsActivity;
 
 import java.util.ArrayList;
-import java.util.Map;
 
 import timber.log.Timber;
 
 public class Chats extends AppCompatActivity {
-    private static final int REQUEST_READ_CONTACTS = 444;
     private static final int CONTACTS_ID = Menu.FIRST;
     private static final int NEW_GROUP_ID = CONTACTS_ID + 1;
     private static final int LOG_OUT_ID = NEW_GROUP_ID + 1;
@@ -48,16 +42,11 @@ public class Chats extends AppCompatActivity {
     //private ProgressDialog pDialog;
     private Handler updateBarHandler;
 
-    Cursor cursor;
-
     FirebaseUser mFirebaseUser;
     FirebaseDatabase mFirebaseDatabase;
 
     DatabaseReference mUserDatabaseReference;
     private DatabaseReference mChatsDatabaseReference;
-
-
-    FirebaseMultiQuery firebaseMultiQuery;
 
     ArrayList<Chat> mChatList = new ArrayList<>();
 
@@ -106,21 +95,7 @@ public class Chats extends AppCompatActivity {
     }
 
     private void getChats() {
-        Timber.v("getContacts");
-
-        /*firebaseMultiQuery = new FirebaseMultiQuery(mUserDatabaseReference);
-        final Task<Map<DatabaseReference, DataSnapshot>> allLoad = firebaseMultiQuery.start();
-        allLoad.addOnCompleteListener(this, new Chats.AllOnCompleteListener());*/
-
-        Uri CONTENT_URI = ContactsContract.Contacts.CONTENT_URI;
-
-        //Uri EmailCONTENT_URI = ContactsContract.CommonDataKinds.Email.CONTENT_URI;
-        //String EmailCONTACT_ID = ContactsContract.CommonDataKinds.Email.CONTACT_ID;
-        //String DATA = ContactsContract.CommonDataKinds.Email.DATA;
-        ContentResolver contentResolver = getContentResolver();
-        cursor = contentResolver.query(CONTENT_URI, null, null, null, null);
-        // Iterate every contact in the phone
-
+        Timber.v("getChats()");
 
         mUserDatabaseReference.child(getString(R.string.chats)).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -128,63 +103,75 @@ public class Chats extends AppCompatActivity {
                 Timber.v("dataSnapshot = " + dataSnapshot);
                 for (final DataSnapshot childSnapshot : dataSnapshot.getChildren()) {
                     Timber.v("childSnapshot = " + childSnapshot);
+                    if (childSnapshot.getValue() == null) continue;
+
                     Timber.v("phoneNumber " + childSnapshot.child("phoneNumber").getValue() +
                             "\nchatID" + childSnapshot.child(getString(R.string.chats)).getValue());
-
-                    if (childSnapshot.getValue() == null &&
-                            childSnapshot.child(getString(R.string.chats)).getValue() == null)
-                        continue;
 
                     mChatsDatabaseReference.child(childSnapshot.getKey() + "/" + getString(R.string.meta)
                             + "/" + getString(R.string.type)).addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(DataSnapshot type) {
-                            mChatList.add(new Chat(childSnapshot.getKey(),
-                                    childSnapshot.getValue() + "", "" + type.getValue()));
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    ChatAdapter adapter = new ChatAdapter(getApplicationContext(), mChatList);
-                                    mListView.setAdapter(adapter);
-                                }
-                            });
+                            addChat(childSnapshot, type);
                         }
 
                         @Override
                         public void onCancelled(DatabaseError databaseError) {
                         }
                     });
-
                 }
-                                /*runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
-                                        mListView.setAdapter(adapter);
-                                    }
-                                });*/
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
             }
         });
+    }
 
-        /*// ListView has to be updated using a ui thread
-        runOnUiThread(new Runnable(-) {
+    private void addChat(DataSnapshot childSnapshot, DataSnapshot type) {
+        final Chat chat = new Chat(childSnapshot.getKey(),
+                childSnapshot.getValue() + "", "" + type.getValue());
+        if (!chat.type.equals(getString(R.string.group))) {
+            Cursor c = getContentResolver().query(ContactEntry.CONTENT_URI,
+                    new String[]{
+                            ContactEntry._ID,
+                            ContactEntry.COLUMN_CONTACT_PHONE_NUMBER,
+                            ContactEntry.COLUMN_CONTACT_NAME
+                    },
+                    ContactEntry.COLUMN_CONTACT_PHONE_NUMBER + " = ?",
+                    new String[]{chat.phoneNumber},
+                    null
+                    //ContactEntry.COLUMN_CONTACT_PHONE_NUMBER + " ASC"
+            );
+
+            updateAdapter(c.getString(c.getColumnIndex(ContactEntry.COLUMN_CONTACT_NAME)), chat);
+        } else {
+            mChatsDatabaseReference.child(childSnapshot.getKey() + "/" + getString(R.string.meta)
+                    + "/" + getString(R.string.name)).addListenerForSingleValueEvent(
+                    new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+                            updateAdapter(dataSnapshot.getValue() + "", chat);
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                        }
+                    });
+        }
+    }
+
+    private void updateAdapter(String name, Chat chat) {
+        chat.name = name;
+        mChatList.add(chat);
+
+        runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ContactAdapter adapter = new ContactAdapter(getApplicationContext(), contactList);
+                ChatAdapter adapter = new ChatAdapter(getApplicationContext(), mChatList);
                 mListView.setAdapter(adapter);
             }
         });
-        // Dismiss the progressbar after 500 milliseconds
-        updateBarHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                pDialog.cancel();
-            }
-        }, 500);*/
     }
 
     @Override
@@ -235,7 +222,7 @@ public class Chats extends AppCompatActivity {
                         , parent, false);
             }
 
-            //((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).displayName);
+            ((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).name);
             ((TextView) listItemView.findViewById(R.id.phone_number)).setText(getItem(position).phoneNumber);
             /*ImageView img = listItemView.findViewById(R.id.image);
             Picasso
@@ -252,39 +239,11 @@ public class Chats extends AppCompatActivity {
         }
     }
 
-    private class AllOnCompleteListener implements OnCompleteListener<Map<DatabaseReference, DataSnapshot>> {
-        @Override
-        public void onComplete(@NonNull Task<Map<DatabaseReference, DataSnapshot>> task) {
-            if (task.isSuccessful()) {
-                final Map<DatabaseReference, DataSnapshot> result = task.getResult();
-                // Look up DataSnapshot objects using the same DatabaseReferences you passed into FirebaseMultiQuery
-            } else {
-                if (task.getException() != null)
-                    task.getException().printStackTrace();
-                // log the error or whatever you need to do
-            }
-            /*runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    ChatAdapter adapter = new ChatAdapter(getApplicationContext(), mChatList);
-                    mListView.setAdapter(adapter);
-                }
-            });*/
-            // Dismiss the progressbar after 500 milliseconds
-            /*updateBarHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    pDialog.cancel();
-                }
-            }, 500);*/
-
-        }
-    }
-
     private class Chat {
         String phoneNumber;
         String chatID;
         String type;
+        String name;
 
         Chat(String phone, String chat, String type) {
             phoneNumber = phone;
