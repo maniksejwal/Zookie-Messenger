@@ -15,7 +15,6 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
@@ -29,8 +28,9 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
-import com.zookiemessenger.zookiemessenger.poll.PollActivity;
+import com.zookiemessenger.zookiemessenger.ChatDetails;
 import com.zookiemessenger.zookiemessenger.R;
+import com.zookiemessenger.zookiemessenger.poll.PollActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +43,8 @@ import timber.log.Timber;
 
 public class ChatScreen extends AppCompatActivity {
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
-    private static final int NEW_POLL_ID = Menu.FIRST;
+    private static final int DETAILS_ID = R.id.action_files;
+    private static final int NEW_POLL_ID = DETAILS_ID + 1;
 
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
@@ -72,7 +73,7 @@ public class ChatScreen extends AppCompatActivity {
     private boolean isGroup = false, isNewGroup, isAdmin = false;
     private ArrayList<String> mGroupMemberList;
 
-    public static final int RC_SIGN_IN = 1;
+    //public static final int RC_SIGN_IN = 1;
     private static final int RC_PHOTO_PICKER = 2;
 
     @Override
@@ -80,12 +81,7 @@ public class ChatScreen extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat_screen);
 
-        Intent intent = getIntent();
-        isNewGroup = intent.getBooleanExtra("isNewGroup", false);
-        mType = intent.getStringExtra("type");
-        mGroupMemberList = intent.getStringArrayListExtra("memberList");
-        mContactKey = intent.getStringExtra(getString(R.string.contact_key));
-        mContactName = intent.getStringExtra("contactName");
+        getMyIntent();
 
         mFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         mFirebaseDatabase = FirebaseDatabase.getInstance();
@@ -93,7 +89,6 @@ public class ChatScreen extends AppCompatActivity {
 
         mUserDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.users));
         mChatsDatabaseReference = mFirebaseDatabase.getReference().child(getString(R.string.chats));
-        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
 
         mUserPhoneNumber = mFirebaseUser.getPhoneNumber();
 
@@ -121,6 +116,15 @@ public class ChatScreen extends AppCompatActivity {
         setLayout();
     }
 
+    private void getMyIntent(){
+        Intent intent = getIntent();
+        isNewGroup = intent.getBooleanExtra("isNewGroup", false);
+        mType = intent.getStringExtra("type");
+        mGroupMemberList = intent.getStringArrayListExtra("memberList");
+        mContactKey = intent.getStringExtra(getString(R.string.contact_key));
+        mContactName = intent.getStringExtra("contactName");
+    }
+
     private void getChatKey() {
         mUserDatabaseReference.child(mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactKey)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -130,11 +134,10 @@ public class ChatScreen extends AppCompatActivity {
                         Timber.v("setting chat " + dataSnapshot.getValue());
 
                         if (isNewGroup) newGroup();
-                        else if (dataSnapshot.getValue() == null) {
-                            newPrivateChat();
-                        } else {
-                            getChat(dataSnapshot);
-                        }
+                        else if (dataSnapshot.getValue() == null) newPrivateChat();
+                        else getChat(dataSnapshot);
+
+                        mChatPhotosStorageReference = mFirebaseStorage.getReference().child(mChatKey);
 
                         attachDatabaseReadListener();
                     }
@@ -206,6 +209,33 @@ public class ChatScreen extends AppCompatActivity {
         mChatsDatabaseReference.child(mChatKey).keepSynced(true);
     }
 
+    private void attachDatabaseReadListener() {
+        if (mChildEventListener != null) return;
+        mChildEventListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                Timber.v("" + dataSnapshot.getValue());
+                FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
+                mMessageAdapter.add(friendlyMessage);
+            }
+
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+            }
+
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+            }
+
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+            }
+
+            public void onCancelled(DatabaseError databaseError) {
+            }
+        };
+        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).addChildEventListener(mChildEventListener);
+        Timber.v("messageDatabaseReadListener attached");
+    }
+
+
     private void setLayout() {
         setTitle(mContactName);
         // Initialize references to views
@@ -269,34 +299,9 @@ public class ChatScreen extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
+
     }
 
-
-    private void attachDatabaseReadListener() {
-        if (mChildEventListener != null) return;
-        mChildEventListener = new ChildEventListener() {
-            @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                Timber.v("" + dataSnapshot.getValue());
-                FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
-                mMessageAdapter.add(friendlyMessage);
-            }
-
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-            }
-
-            public void onChildRemoved(DataSnapshot dataSnapshot) {
-            }
-
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-            }
-
-            public void onCancelled(DatabaseError databaseError) {
-            }
-        };
-        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).addChildEventListener(mChildEventListener);
-        Timber.v("messageDatabaseReadListener attached");
-    }
 
     private void detachDatabaseReadListener() {
         if (mChildEventListener != null) {
@@ -308,6 +313,7 @@ public class ChatScreen extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_chat_screen, menu);
         if (isGroup) menu.add(0, NEW_POLL_ID, 0, getString(R.string.new_poll));
         return super.onCreateOptionsMenu(menu);
     }
@@ -315,11 +321,15 @@ public class ChatScreen extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.action_files:
+                Intent intent1 = new Intent(this, ChatDetails.class);
+                startActivity(intent1);
+                break;
             case NEW_POLL_ID:
-                Intent intent = new Intent(this, PollActivity.class);
-                intent.putExtra("newPoll", true);
-                intent.putExtra("chatKey", mChatKey);
-                startActivity(intent);
+                Intent intent2 = new Intent(this, PollActivity.class);
+                intent2.putExtra("newPoll", true);
+                intent2.putExtra("chatKey", mChatKey);
+                startActivity(intent2);
         }
         return super.onOptionsItemSelected(item);
     }
@@ -327,7 +337,8 @@ public class ChatScreen extends AppCompatActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == RC_SIGN_IN) {
+
+        /*if (requestCode == RC_SIGN_IN) {
             if (resultCode == RESULT_OK) {
                 // Sign-in succeeded, set up the UI
                 Toast.makeText(this, "Signed in!", Toast.LENGTH_SHORT).show();
@@ -336,7 +347,9 @@ public class ChatScreen extends AppCompatActivity {
                 Toast.makeText(this, "Sign in canceled", Toast.LENGTH_SHORT).show();
                 finish();
             }
-        } else if (requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK) {
+        } else */
+
+        if (requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK) {
             Uri selectedImageUri = data.getData();
 
             // Get a reference to store file at chat_photos/<FILENAME>

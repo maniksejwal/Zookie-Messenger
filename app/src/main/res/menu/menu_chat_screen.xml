@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_files"
+        android:title="@string/details"
+        android:icon="@drawable/ic_action_folder_shared"
+        app:showAsAction="always" />
+    <!--android:icon="@drawable/ic_favorite_black_48dp"-->
+
+    <!-- Settings, should always be in the overflow -->
+    <item
+        android:id="@+id/action_settings"
+        android:title="@string/new_poll"
+        app:showAsAction="never" />
+
+</menu>

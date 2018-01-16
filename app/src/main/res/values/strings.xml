@@ -355,4 +355,9 @@
     <string name="vote_count">Vote count</string>
     <string name="name">name</string>
 
+    <!--App strings-->
+    <string name="details">Details</string>
+    <string name="enter_tag">Enter tag</string>
+    <string name="enter_name">Enter name</string>
+
 </resources>

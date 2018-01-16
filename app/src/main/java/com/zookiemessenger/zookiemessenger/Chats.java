@@ -88,6 +88,7 @@ public class Chats extends AppCompatActivity {
                 Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
                 intent.putExtra(getString(R.string.contact_key), mChatList.get(position).phoneNumber);
                 intent.putExtra(getString(R.string.type), mChatList.get(position).type);
+                intent.putExtra("contactName", mChatList.get(position).name);
                 startActivity(intent);
             }
         });
