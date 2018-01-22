@@ -359,5 +359,6 @@
     <string name="details">Details</string>
     <string name="enter_tag">Enter tag</string>
     <string name="enter_name">Enter name</string>
+    <string name="try_again">Please try again</string>
 
 </resources>

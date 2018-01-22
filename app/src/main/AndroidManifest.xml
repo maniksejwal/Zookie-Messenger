@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -28,14 +29,24 @@
         <activity android:name=".contacts.ContactsActivity" />
         <activity android:name=".Chats" />
         <activity android:name=".chat.ChatScreen" />
+        <activity android:name=".ChatDetails" />
         <activity android:name=".poll.PollActivity" />
 
         <provider
             android:name=".contacts.ContactProvider"
             android:authorities="com.zookiemessenger.zookiemessenger"
             android:exported="false" />
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="com.zookiemessenger.zookiemessenger.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
-        <activity android:name=".ChatDetails"></activity>
+        <activity android:name=".chat.TagsActivity"></activity>
     </application>
 
 </manifest>

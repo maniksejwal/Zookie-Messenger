@@ -3,9 +3,10 @@ package com.zookiemessenger.zookiemessenger.chat;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
-import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -32,6 +33,8 @@ import com.zookiemessenger.zookiemessenger.ChatDetails;
 import com.zookiemessenger.zookiemessenger.R;
 import com.zookiemessenger.zookiemessenger.poll.PollActivity;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +45,7 @@ import timber.log.Timber;
  */
 
 public class ChatScreen extends AppCompatActivity {
-    public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
+    //public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
     private static final int DETAILS_ID = R.id.action_files;
     private static final int NEW_POLL_ID = DETAILS_ID + 1;
 
@@ -59,22 +62,30 @@ public class ChatScreen extends AppCompatActivity {
 
     private DatabaseReference mUserDatabaseReference;
     private DatabaseReference mChatsDatabaseReference;
-    private StorageReference mChatPhotosStorageReference;
+    private StorageReference mChatStorageReference;
 
     public String mChatKey = null;
 
     private ChildEventListener mChildEventListener;
 
-    private String mContactKey;
-    private String mContactName;
-    private String mUserPhoneNumber;
+    private String mContactKey, mContactName, mUserPhoneNumber;
 
     private String mType;
     private boolean isGroup = false, isNewGroup, isAdmin = false;
     private ArrayList<String> mGroupMemberList;
 
+    private String mTempGraphicPath;
+    private static final String FILE_PROVIDER_AUTHORITY = "com.zookiemessenger.zookiemessenger.fileprovider";
+
     //public static final int RC_SIGN_IN = 1;
-    private static final int RC_PHOTO_PICKER = 2;
+    private static final int RC_FILE_PICKER = 1;
+    private static final int RC_GRAPHIC_PICKER = 2;
+    private static final int RC_IMAGE_CAPTURE = 3;
+    private static final int RC_VIDEO_CAPTURE = 4;
+    private static final int RC_TAGS = 5;
+    private static final int RC_CONTACT = 5;
+    private static final int RC_AUDIO_PICKER = 4;
+    private static final int RC_DOCUMENT_PICKER = 5;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,7 +127,7 @@ public class ChatScreen extends AppCompatActivity {
         setLayout();
     }
 
-    private void getMyIntent(){
+    private void getMyIntent() {
         Intent intent = getIntent();
         isNewGroup = intent.getBooleanExtra("isNewGroup", false);
         mType = intent.getStringExtra("type");
@@ -137,7 +148,7 @@ public class ChatScreen extends AppCompatActivity {
                         else if (dataSnapshot.getValue() == null) newPrivateChat();
                         else getChat(dataSnapshot);
 
-                        mChatPhotosStorageReference = mFirebaseStorage.getReference().child(mChatKey);
+                        mChatStorageReference = mFirebaseStorage.getReference().child(mChatKey);
 
                         attachDatabaseReadListener();
                     }
@@ -252,19 +263,18 @@ public class ChatScreen extends AppCompatActivity {
         mMessageListView.setAdapter(mMessageAdapter);
 
         // Initialize progress bar
-        mProgressBar.setVisibility(ProgressBar.INVISIBLE);
+        mProgressBar.setVisibility(ProgressBar.GONE);
 
         // ImagePickerButton shows an image picker to upload a image for a message
         mPhotoPickerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("image/jpeg");
-                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                startActivityForResult(Intent.createChooser(intent,
-                        "Complete action using"), RC_PHOTO_PICKER);
+                //Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                //intent.setType("location/*");
+                //intent.setType("contact/*");
             }
         });
+
 
         // Enable Send button when there's text to send
         mMessageEditText.addTextChangedListener(new TextWatcher() {
@@ -286,7 +296,7 @@ public class ChatScreen extends AppCompatActivity {
             }
         });
 
-        mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(DEFAULT_MSG_LENGTH_LIMIT)});
+        //mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(DEFAULT_MSG_LENGTH_LIMIT)});
 
         // Send button sends a message and clears the EditText
         mSendButton.setOnClickListener(new View.OnClickListener() {
@@ -300,6 +310,115 @@ public class ChatScreen extends AppCompatActivity {
             }
         });
 
+        attachFileClickListeners();
+    }
+
+    private void attachFileClickListeners() {
+        findViewById(R.id.share_image).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*, video/*");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent,
+                        "Complete action using"), RC_GRAPHIC_PICKER);
+            }
+        });
+
+        /*
+        findViewById(R.id.share_audio).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("audio/.mp3");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent,
+                        "Complete action using"), RC_AUDIO_PICKER);
+            }
+        });
+
+        findViewById(R.id.share_document).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("application/.pdf, text/*");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent,
+                        "Complete action using"), RC_DOCUMENT_PICKER);
+            }
+        });*/
+
+        findViewById(R.id.share_file).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                if (intent.resolveActivity(getPackageManager()) != null)
+                    startActivityForResult(Intent.createChooser(intent,
+                            "Complete action using"), RC_FILE_PICKER);
+            }
+        });
+
+        findViewById(R.id.share_new_pic).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                File photoFile = null;
+                try {
+                    photoFile = GraphicUtils.createTempImageFile(getApplicationContext());
+                } catch (IOException e) {
+                    // Error occurred while creating the File
+                    e.printStackTrace();
+                }
+                if (photoFile == null) return;
+                // Get the path of the temporary file
+                mTempGraphicPath = photoFile.getAbsolutePath();
+                // Get the content URI for the image file
+                Uri photoURI = FileProvider.getUriForFile(getApplicationContext(),
+                        FILE_PROVIDER_AUTHORITY, photoFile);
+                // Add the URI so the camera can store the image
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                // Launch the camera activity
+                startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_IMAGE_CAPTURE);
+            }
+        });
+
+        findViewById(R.id.share_new_video).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+                File videoFile = null;
+                try {
+                    videoFile = GraphicUtils.createTempVideoFile(getApplicationContext());
+                } catch (IOException e) {
+                    // Error occurred while creating the File
+                    e.printStackTrace();
+                }
+                if (videoFile == null) return;
+                // Get the path of the temporary file
+                mTempGraphicPath = videoFile.getAbsolutePath();
+                // Get the content URI for the image file
+                Uri videoURI = FileProvider.getUriForFile(getApplicationContext(),
+                        FILE_PROVIDER_AUTHORITY, videoFile);
+                // Add the URI so the camera can store the image
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, videoURI);
+                // Launch the camera activity
+                startActivityForResult(Intent.createChooser(intent, "Complete action using"),
+                        RC_VIDEO_CAPTURE);
+            }
+        });
+
+        /*
+        findViewById(R.id.share_contact).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_PICK);
+                intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
+                startActivityForResult(Intent.createChooser(intent, "Complete action using")
+                        , RC_CONTACT);
+            }
+        });*/
     }
 
 
@@ -338,38 +457,109 @@ public class ChatScreen extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        /*if (requestCode == RC_SIGN_IN) {
-            if (resultCode == RESULT_OK) {
-                // Sign-in succeeded, set up the UI
-                Toast.makeText(this, "Signed in!", Toast.LENGTH_SHORT).show();
-            } else if (resultCode == RESULT_CANCELED) {
-                // Sign in was canceled by the user, finish the activity
-                Toast.makeText(this, "Sign in canceled", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        } else */
+        Uri selectedFileUri;
+        StorageReference fileRef;
 
-        if (requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK) {
-            Uri selectedImageUri = data.getData();
+        switch (requestCode) {
+            case RC_GRAPHIC_PICKER:
+                if (resultCode != RESULT_OK) return;
+                selectedFileUri = data.getData();
+                fileRef = mChatStorageReference.child(selectedFileUri.getLastPathSegment());
+                fileRef.putFile(selectedFileUri)
+                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                // When the image has successfully uploaded, we get its download URL
+                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
 
-            // Get a reference to store file at chat_photos/<FILENAME>
-            StorageReference photoRef = mChatPhotosStorageReference.child(selectedImageUri.getLastPathSegment());
+                                // Set the download URL to the message box, so that the user can send it to the database
+                                FriendlyMessage friendlyMessage = new FriendlyMessage(null
+                                        , mUserPhoneNumber, "image", downloadUrl.toString());
+                                Timber.v("mChatKey " + mChatKey);
+                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
+                            }
+                        });
+                break;
+            case RC_FILE_PICKER:
+                if (resultCode != RESULT_OK) return;
+                selectedFileUri = data.getData();
+                fileRef = mChatStorageReference.child(selectedFileUri.getLastPathSegment());
+                fileRef.putFile(selectedFileUri)
+                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                // When the image has successfully uploaded, we get its download URL
+                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
 
-            // Upload file to Firebase Storage
-            photoRef.putFile(selectedImageUri)
-                    .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                            // When the image has successfully uploaded, we get its download URL
-                            Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                                // Set the download URL to the message box, so that the user can send it to the database
+                                FriendlyMessage friendlyMessage = new FriendlyMessage(null
+                                        , mUserPhoneNumber, "file", downloadUrl.toString());
+                                Timber.v("mChatKey " + mChatKey);
+                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
+                            }
+                        });
+                break;
+            case RC_IMAGE_CAPTURE:
+                if (resultCode != RESULT_OK) {
+                    GraphicUtils.deleteGraphicFile(getApplicationContext(), mTempGraphicPath);
+                    return;
+                }
+                fileRef = mChatStorageReference.child(mTempGraphicPath);
 
-                            // Set the download URL to the message box, so that the user can send it to the database
-                            FriendlyMessage friendlyMessage = new FriendlyMessage(null
-                                    , mUserPhoneNumber, "image", downloadUrl.toString());
-                            Timber.v("mChatKey " + mChatKey);
-                            mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
-                        }
-                    });
+                fileRef.putFile(Uri.fromFile(new File(mTempGraphicPath)))
+                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                // When the image has successfully uploaded, we get its download URL
+                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
+
+                                // Set the download URL to the message box, so that the user can send it to the database
+                                FriendlyMessage friendlyMessage = new FriendlyMessage(null
+                                        , mUserPhoneNumber, "image", downloadUrl.toString());
+                                Timber.v("mChatKey " + mChatKey);
+                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
+                            }
+                        });
+                break;
+            case RC_VIDEO_CAPTURE:
+                if (resultCode != RESULT_OK) {
+                    GraphicUtils.deleteGraphicFile(getApplicationContext(), mTempGraphicPath);
+                    return;
+                }
+                fileRef = mChatStorageReference.child(mTempGraphicPath);
+                Timber.v("video recording complete");
+
+                fileRef.putFile(Uri.fromFile(new File(mTempGraphicPath)))
+                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                Timber.v("video uploaded");
+                                // When the image has successfully uploaded, we get its download URL
+                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
+
+                                // Set the download URL to the message box, so that the user can send it to the database
+                                FriendlyMessage friendlyMessage = new FriendlyMessage(null
+                                        , mUserPhoneNumber, "image", downloadUrl.toString());
+                                Timber.v("mChatKey " + mChatKey);
+                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
+                            }
+                        });
+                break;
+            /*case RC_CONTACT:
+                if (resultCode != RESULT_OK) return;
+                selectedFileUri = data.getData();
+                fileRef = mChatStorageReference.child(selectedFileUri.getLastPathSegment());
+                fileRef.putFile(selectedFileUri)
+                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                // When the image has successfully uploaded, we get its download URL
+                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                                // Set the download URL to the message box, so that the user can send it to the database
+                                FriendlyMessage friendlyMessage = new FriendlyMessage(null
+                                        , mUserPhoneNumber, "file", downloadUrl.toString());
+                                Timber.v("mChatKey " + mChatKey);
+                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
+                            }
+                        });
+                break;*/
         }
+
     }
 
     @Override
@@ -383,3 +573,5 @@ public class ChatScreen extends AppCompatActivity {
 
 //TODO: add meta to chat
 //TODO: delete messages
+//TODO: add message layout
+//TODO: receive videos
