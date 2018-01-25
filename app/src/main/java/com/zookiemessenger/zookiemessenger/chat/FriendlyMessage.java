@@ -10,15 +10,17 @@ public class FriendlyMessage {
     private String userPhoneNumber;
     private String url;
     private String type;
+    private String[] tags;
 
     public FriendlyMessage() {
     }
 
-    public FriendlyMessage(String text, String user, String type, String url) {
+    public FriendlyMessage(String text, String user, String type, String url, String[] tags) {
         this.text = text;
         this.userPhoneNumber = user;
         this.url = url;
         this.type = type;
+        this.tags = tags;
     }
 
     public String getType() {

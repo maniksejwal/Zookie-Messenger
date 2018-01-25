@@ -1,9 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.zookiemessenger.zookiemessenger.chat.TagsActivity">
+    tools:context="com.zookiemessenger.zookiemessenger.chat.TagsActivity"
+    android:orientation="vertical">
 
-</android.support.constraint.ConstraintLayout>
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:id="@+id/tag_list"/>
+
+    <LinearLayout
+        android:id="@+id/new_tag_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/enter_tag" />
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/add_tag_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_action_done" />
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/tags_done"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_action_send" />
+
+    </LinearLayout>
+
+</LinearLayout>
