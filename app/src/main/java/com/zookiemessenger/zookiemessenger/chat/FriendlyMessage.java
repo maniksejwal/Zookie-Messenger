@@ -1,5 +1,7 @@
 package com.zookiemessenger.zookiemessenger.chat;
 
+import java.util.List;
+
 /**
  * Created by manik on 1/1/18.
  */
@@ -10,12 +12,12 @@ public class FriendlyMessage {
     private String userPhoneNumber;
     private String url;
     private String type;
-    private String[] tags;
+    private List<String> tags;
 
     public FriendlyMessage() {
     }
 
-    public FriendlyMessage(String text, String user, String type, String url, String[] tags) {
+    public FriendlyMessage(String text, String user, String type, String url, List<String> tags) {
         this.text = text;
         this.userPhoneNumber = user;
         this.url = url;
@@ -49,5 +51,13 @@ public class FriendlyMessage {
 
     public void setPhotoUrl(String url) {
         this.url = url;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    public List<String> getTags(){
+        return tags;
     }
 }

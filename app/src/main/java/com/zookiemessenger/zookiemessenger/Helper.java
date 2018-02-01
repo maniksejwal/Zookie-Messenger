@@ -5,6 +5,11 @@ package com.zookiemessenger.zookiemessenger;
  */
 
 public class Helper {
+    //Server constants
+    public static final String IMAGE = "image";
+
+    //App Constants
+    public static final String REQUEST_CODE = "requestCode";
 
     public class Country {
         String[] mCode;

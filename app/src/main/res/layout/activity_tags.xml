@@ -22,19 +22,21 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:id="@+id/add_tag_edit_text"
             android:hint="@string/enter_tag" />
 
-        <android.support.design.widget.FloatingActionButton
+        <ImageButton
             android:id="@+id/add_tag_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_action_done" />
+            android:src="@drawable/ic_action_next_arrow" />
 
-        <android.support.design.widget.FloatingActionButton
+        <ImageButton
             android:id="@+id/tags_done"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_action_send" />
+            android:src="@drawable/ic_action_done"
+            android:visibility="gone"/>
 
     </LinearLayout>
 
