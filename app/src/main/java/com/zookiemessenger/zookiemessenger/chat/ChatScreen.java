@@ -565,7 +565,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                                         mUserPhoneNumber, "file", downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages))
+                                mChatsDatabaseReference.child(mChatKey + "/" + Helper.MESSAGES)
                                         .push().setValue(friendlyMessage);
                             }
                         });
@@ -582,7 +582,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                                         mUserPhoneNumber, "image", downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages))
+                                mChatsDatabaseReference.child(mChatKey + "/" + Helper.MESSAGES)
                                         .push().setValue(friendlyMessage);
                             }
                         });
@@ -600,7 +600,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                                         mUserPhoneNumber, "image", downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages))
+                                mChatsDatabaseReference.child(mChatKey + "/" + Helper.MESSAGES)
                                         .push().setValue(friendlyMessage);
                             }
                         });

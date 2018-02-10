@@ -1,5 +1,24 @@
 package com.zookiemessenger.zookiemessenger;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Environment;
+import android.support.annotation.NonNull;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.storage.StorageReference;
+
+import java.io.File;
+import java.io.FileOutputStream;
+
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.support.v4.app.ActivityCompat.requestPermissions;
+import static android.support.v4.content.PermissionChecker.checkSelfPermission;
+
 /**
  * Created by manik on 1/1/18.
  */
@@ -7,9 +26,14 @@ package com.zookiemessenger.zookiemessenger;
 public class Helper {
     //Server constants
     public static final String IMAGE = "image";
+    public static final String MESSAGES = "messages";
 
     //App Constants
     public static final String REQUEST_CODE = "requestCode";
+    private static final int REQUEST_STORAGE_ACCESS = 555;
+
+    public static final String APP_FOLDER = Environment.getExternalStorageDirectory().toString()
+            + "/Zookie/";
 
     public class Country {
         String[] mCode;
@@ -511,5 +535,59 @@ public class Helper {
                 new Country("Zambia", "260"),
                 new Country("Zimbabwe", "263"),
         };
+    }
+
+    public static boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        return Environment.MEDIA_MOUNTED.equals(state);
+    }
+
+    public static boolean makeDirectory(String path) {
+        File pDir = new File(path);
+        boolean isDirectoryCreated = pDir.exists();
+        if (!isDirectoryCreated)
+            isDirectoryCreated = pDir.mkdir();
+        if (isDirectoryCreated) return true;                //Write the file
+        else throw new RuntimeException("Couldn't create the directory");
+    }
+
+    private static boolean mayAccessStorage(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+        if (checkSelfPermission(context, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+            return true;
+        //if (shouldShowRequestPermissionRationale((Activity) context, READ_EXTERNAL_STORAGE)) {
+        requestPermissions((Activity) context, new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE},
+                REQUEST_STORAGE_ACCESS);
+        //} else {
+        //    requestPermissions((Activity) context, new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE},
+        // REQUEST_STORAGE_ACCESS);
+        //}
+        return false;
+    }
+
+    public static void saveFile(Context context, String path, StorageReference ref, final File file) {
+        if (mayAccessStorage(context))
+            if (Helper.isExternalStorageWritable() && Helper.makeDirectory(Helper.APP_FOLDER)
+                    && Helper.makeDirectory(path)) {
+                final long ONE_MEGABYTE = 1024 * 1024;
+                ref.getBytes(ONE_MEGABYTE * 100).addOnSuccessListener(new OnSuccessListener<byte[]>() {
+                    @Override
+                    public void onSuccess(byte[] bytes) {
+                        try {
+                            FileOutputStream outputStream = new FileOutputStream(file);
+                            outputStream.write(bytes);
+                            outputStream.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+                    }
+                });
+            }
     }
 }
