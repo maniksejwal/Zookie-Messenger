@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.VideoView;
 
 import com.bumptech.glide.Glide;
 import com.google.firebase.storage.FirebaseStorage;
@@ -41,20 +42,34 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         if (convertView == null) {
-            convertView = ((Activity) getContext()).getLayoutInflater().inflate(R.layout.item_message, parent, false);
+            convertView = ((Activity) getContext()).getLayoutInflater().inflate(R.layout.item_message,
+                    parent, false);
         }
 
         ImageView photoImageView = convertView.findViewById(R.id.photoImageView);
+        VideoView videoVideoView = convertView.findViewById(R.id.videoVideoView);
         TextView messageTextView = convertView.findViewById(R.id.messageTextView);
         TextView authorTextView = convertView.findViewById(R.id.nameTextView);
 
         final FriendlyMessage message = getItem(position);
 
         String type = message.getType();
+        Timber.v("message " + message);
+        Timber.v("type = " + type);
+
+        StorageReference ref = null;
+        String path = null;
+        String name = null;
+        File file = null;
+        if (message.getUrl() != null) {
+            ref = mFirebaseStorage.getReferenceFromUrl(message.getUrl());
+            path = Helper.APP_FOLDER + File.separator + "Files";
+            name = ref.getName();
+            file = new File(path + File.separator + name);
+        }
 
         switch (type) {
-            case "poll":
-                Timber.v("case poll");
+            case Helper.POLL:
                 messageTextView.setVisibility(View.VISIBLE);
                 photoImageView.setVisibility(View.GONE);
                 messageTextView.setText(message.getText());
@@ -68,21 +83,35 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
                         getContext().startActivity(intent);
                     }
                 });
+
                 break;
-            case "image":
-                Timber.v("case image");
+            case Helper.GRAPHIC:
+                //gif
+                if (name.endsWith(".gif")) gif(path, ref, file, photoImageView, messageTextView);
+                    //Video
+                else if (name.endsWith(".mp4") || name.endsWith(".avi") || name.endsWith(".flv") ||
+                        name.endsWith(".wmv") || name.endsWith(".mov") || name.endsWith(".mpg")) {
+                    Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
+                    messageTextView.setVisibility(View.GONE);
+                    photoImageView.setVisibility(View.GONE);
+                    videoVideoView.setVisibility(View.VISIBLE);
+                }
+                //Image
+                else image(path, ref, file, photoImageView, messageTextView);
+
+                break;
+            case Helper.IMAGE:
+                image(path, ref, file, photoImageView, messageTextView);
+
+                break;
+            case Helper.VIDEO:
                 Timber.v("message " + message);
-                StorageReference ref = mFirebaseStorage.getReferenceFromUrl(message.getUrl());
-                final String path = Helper.APP_FOLDER + File.separator + "Files";
-                final String name = ref.getName();
-                final File file = new File(path + name);
-                Helper.saveFile(getContext(), path, ref, file);
-                Glide.with(photoImageView.getContext())
-                        .load(file)
-                        .placeholder(R.drawable.common_google_signin_btn_icon_dark_normal)  //TODO: change this
-                        .into(photoImageView);
+                Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
+
                 messageTextView.setVisibility(View.GONE);
-                photoImageView.setVisibility(View.VISIBLE);
+                photoImageView.setVisibility(View.GONE);
+                videoVideoView.setVisibility(View.VISIBLE);
+
                 break;
             default:
                 messageTextView.setVisibility(View.VISIBLE);
@@ -93,4 +122,30 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
         authorTextView.setText(message.getName());
         return convertView;
     }
+
+    private void image(String path, StorageReference ref, File file, ImageView photoImageView,
+                       TextView messageTextView) {
+        Helper.saveFile(getContext(), path, ref, file);
+        Glide.with(photoImageView.getContext())
+                .load(file)
+                .thumbnail(1)
+                .into(photoImageView);
+        messageTextView.setVisibility(View.GONE);
+        photoImageView.setVisibility(View.VISIBLE);
+    }
+
+    private void gif(String path, StorageReference ref, File file, ImageView photoImageView,
+                     TextView messageTextView) {
+        Helper.saveFile(getContext(), path, ref, file);
+        Glide
+                .with(photoImageView.getContext())
+                .load(file)
+                .thumbnail(1)
+                .into(photoImageView);
+
+        messageTextView.setVisibility(View.GONE);
+        photoImageView.setVisibility(View.VISIBLE);
+    }
 }
+
+//TODO: play videos and gifs

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.widget.VideoView;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -13,6 +14,7 @@ import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
@@ -26,6 +28,9 @@ import static android.support.v4.content.PermissionChecker.checkSelfPermission;
 public class Helper {
     //Server constants
     public static final String IMAGE = "image";
+    public static final String VIDEO = "video";
+    public static final String GRAPHIC = "graphic";
+    public static final String POLL = "poll";
     public static final String MESSAGES = "messages";
 
     //App Constants
@@ -589,5 +594,44 @@ public class Helper {
                     }
                 });
             }
+    }
+
+    public static void saveVideo(Context context, String path, StorageReference ref,
+                                 final File file, final VideoView videoView) {
+        if (mayAccessStorage(context))
+            if (Helper.isExternalStorageWritable() && Helper.makeDirectory(Helper.APP_FOLDER)
+                    && Helper.makeDirectory(path)) {
+                final long ONE_MEGABYTE = 1024 * 1024;
+                ref.getBytes(ONE_MEGABYTE * 100).addOnSuccessListener(new OnSuccessListener<byte[]>() {
+                    @Override
+                    public void onSuccess(byte[] bytes) {
+                        try {
+                            FileOutputStream outputStream = new FileOutputStream(file);
+                            outputStream.write(bytes);
+                            outputStream.close();
+                            videoView.setVideoPath(file.getPath());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+                    }
+                });
+            }
+    }
+
+    //Environment.getExternalStorageDirectory(), ".pdf" for a full scan
+    public ArrayList<File> searchFilesWithExtension(File dir, String pattern) {
+        File listFile[] = dir.listFiles();
+        ArrayList<File> list = new ArrayList<>();
+
+        if (listFile != null)
+            for (File aListFile : listFile) {
+                if (aListFile.isDirectory()) searchFilesWithExtension(aListFile, pattern);
+                else if (aListFile.getName().endsWith(pattern)) list.add(aListFile);
+            }
+        return list;
     }
 }

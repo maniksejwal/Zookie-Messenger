@@ -1,9 +1,11 @@
 package com.zookiemessenger.zookiemessenger.chat;
 
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -16,7 +18,6 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
@@ -43,6 +44,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import timber.log.Timber;
+
+import static com.zookiemessenger.zookiemessenger.Helper.MESSAGES;
 
 /**
  * Created by manik on 24/12/17.
@@ -470,7 +473,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
             case RC_GRAPHIC_PICKER:
                 if (resultCode != RESULT_OK) return;
                 mSelectedFileUri = data.getData();
-                mFileRef = mChatStorageReference.child(mSelectedFileUri.getLastPathSegment());
+                mFileRef = mChatStorageReference.child(getFileName(mSelectedFileUri));
                 openTagsActivity(requestCode);
                 break;
             case RC_FILE_PICKER:
@@ -543,12 +546,12 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                                 Uri downloadUrl = taskSnapshot.getDownloadUrl();
                                 Timber.v("downloadUrl " + downloadUrl);
                                 FriendlyMessage friendlyMessage = new FriendlyMessage(null,
-                                        mUserPhoneNumber, Helper.IMAGE, downloadUrl.toString(),
+                                        mUserPhoneNumber, Helper.GRAPHIC, downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages))
+                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
                                         .push().setValue(friendlyMessage);
-                                Toast.makeText(getApplicationContext(), "Done", Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(getApplicationContext(), "Done", Toast.LENGTH_SHORT).show();
                                 //finish();
                             }
                         });
@@ -565,7 +568,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                                         mUserPhoneNumber, "file", downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + Helper.MESSAGES)
+                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
                                         .push().setValue(friendlyMessage);
                             }
                         });
@@ -579,10 +582,10 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
 
                                 // Set the download URL to the message box, so that the user can send it to the database
                                 FriendlyMessage friendlyMessage = new FriendlyMessage(null,
-                                        mUserPhoneNumber, "image", downloadUrl.toString(),
+                                        mUserPhoneNumber, Helper.IMAGE, downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + Helper.MESSAGES)
+                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
                                         .push().setValue(friendlyMessage);
                             }
                         });
@@ -600,7 +603,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                                         mUserPhoneNumber, "image", downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + Helper.MESSAGES)
+                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
                                         .push().setValue(friendlyMessage);
                             }
                         });
@@ -626,9 +629,32 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
         }
 
     }
+
+    private String getFileName(Uri uri) {
+        String result = null;
+        if (uri.getScheme().equals("content")) {
+            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                }
+            } finally {
+                cursor.close();
+            }
+        }
+        if (result == null) {
+            result = uri.getPath();
+            int cut = result.lastIndexOf('/');
+            if (cut != -1) {
+                result = result.substring(cut + 1);
+            }
+        }
+        return result;
+    }
 }
 
 //TODO: add meta to chat
 //TODO: delete messages
 //TODO: add message layout
 //TODO: receive videos
+//TODO: send docs, locations, etc
