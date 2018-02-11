@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -13,11 +14,8 @@ import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ListView;
-import android.widget.ProgressBar;
 
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
@@ -69,10 +67,8 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
 
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
-    private ProgressBar mProgressBar;
-    private ImageButton mPhotoPickerButton;
     private EditText mMessageEditText;
-    private Button mSendButton;
+    private FloatingActionButton mSendButton;
 
     private FirebaseUser mFirebaseUser;
     private FirebaseDatabase mFirebaseDatabase;
@@ -262,30 +258,18 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
     private void setLayout() {
         setTitle(mContactName);
         // Initialize references to views
-        mProgressBar = findViewById(R.id.progressBar);
         mMessageListView = findViewById(R.id.messageListView);
-        mPhotoPickerButton = findViewById(R.id.photoPickerButton);
+
         mMessageEditText = findViewById(R.id.messageEditText);
         mSendButton = findViewById(R.id.sendButton);
+
+        //(findViewById(R.id.messageEditText)).getBackground().clearColorFilter();
 
         // Initialize message ListView and its adapter
         Timber.v("setLayout() mChatKey " + mChatKey);
         List<FriendlyMessage> friendlyMessages = new ArrayList<>();
         mMessageAdapter = new MessageAdapter(this, R.layout.item_message, friendlyMessages, mUserPhoneNumber, mChatKey);
         mMessageListView.setAdapter(mMessageAdapter);
-
-        // Initialize progress bar
-        mProgressBar.setVisibility(ProgressBar.GONE);
-
-        // ImagePickerButton shows an image picker to upload a image for a message
-        mPhotoPickerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                //Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                //intent.setType("location/*");
-                //intent.setType("contact/*");
-            }
-        });
 
 
         // Enable Send button when there's text to send
@@ -504,6 +488,8 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                 if (resultCode != RESULT_OK) return;
                 List<String> tagList = Arrays.asList(data.getStringArrayExtra(getString(R.string.tag_list)));
                 int oldRequestCode = data.getIntExtra(Helper.REQUEST_CODE, -1);
+                //mFileRef.updateMetadata(new StorageMetadata.Builder().setCustomMetadata(Helper.TAGS,
+                  //      String.valueOf(tagList)).build());
                 uploadFile(tagList, oldRequestCode);
 
 
@@ -565,7 +551,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
 
                                 // Set the download URL to the message box, so that the user can send it to the database
                                 FriendlyMessage friendlyMessage = new FriendlyMessage(null,
-                                        mUserPhoneNumber, "file", downloadUrl.toString(),
+                                        mUserPhoneNumber, Helper.FILE, downloadUrl.toString(),
                                         tagList);
                                 Timber.v("mChatKey " + mChatKey);
                                 mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)

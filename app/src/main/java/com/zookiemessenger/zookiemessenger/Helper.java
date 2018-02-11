@@ -31,7 +31,9 @@ public class Helper {
     public static final String VIDEO = "video";
     public static final String GRAPHIC = "graphic";
     public static final String POLL = "poll";
+    public static final String FILE = "file";
     public static final String MESSAGES = "messages";
+    public static final String TAGS = "tags";
 
     //App Constants
     public static final String REQUEST_CODE = "requestCode";

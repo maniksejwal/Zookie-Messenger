@@ -361,6 +361,7 @@
     <string name="enter_name">Enter name</string>
     <string name="try_again">Please try again</string>
     <string name="tag_list">tagList</string>
+    <string name="write_your_messager_here">Write your messager here</string>
 
 
 </resources>

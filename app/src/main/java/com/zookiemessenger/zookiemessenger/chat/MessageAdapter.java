@@ -7,10 +7,12 @@ package com.zookiemessenger.zookiemessenger.chat;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.VideoView;
 
@@ -46,8 +48,8 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
                     parent, false);
         }
 
-        ImageView photoImageView = convertView.findViewById(R.id.photoImageView);
-        VideoView videoVideoView = convertView.findViewById(R.id.videoVideoView);
+        ImageView photoImageView = convertView.findViewById(R.id.photo_view);
+        VideoView videoVideoView = convertView.findViewById(R.id.video_view);
         TextView messageTextView = convertView.findViewById(R.id.messageTextView);
         TextView authorTextView = convertView.findViewById(R.id.nameTextView);
 
@@ -92,8 +94,6 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
                 else if (name.endsWith(".mp4") || name.endsWith(".avi") || name.endsWith(".flv") ||
                         name.endsWith(".wmv") || name.endsWith(".mov") || name.endsWith(".mpg")) {
                     Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
-                    messageTextView.setVisibility(View.GONE);
-                    photoImageView.setVisibility(View.GONE);
                     videoVideoView.setVisibility(View.VISIBLE);
                 }
                 //Image
@@ -105,22 +105,43 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
 
                 break;
             case Helper.VIDEO:
-                Timber.v("message " + message);
                 Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
-
-                messageTextView.setVisibility(View.GONE);
-                photoImageView.setVisibility(View.GONE);
                 videoVideoView.setVisibility(View.VISIBLE);
+
+                break;
+            case Helper.FILE:
+                Helper.saveFile(getContext(), path, ref, file);
+                Glide.with(photoImageView.getContext())
+                        .load(file)
+                        .thumbnail(1/10)
+                        .into(photoImageView);
+                photoImageView.setVisibility(View.VISIBLE);
 
                 break;
             default:
                 messageTextView.setVisibility(View.VISIBLE);
-                photoImageView.setVisibility(View.GONE);
                 messageTextView.setText(message.getText());
         }
 
-        authorTextView.setText(message.getName());
+        setSender(message, authorTextView, convertView);
         return convertView;
+    }
+
+    private void setSender(FriendlyMessage message, TextView authorTextView, View convertView){
+        authorTextView.setText(message.getName());
+        LinearLayout messageLayout = convertView.findViewById(R.id.message);
+        if (message.getName().equals(mUserPhoneNumber)) {
+            messageLayout.setGravity(Gravity.END);
+            convertView.findViewById(R.id.spacer_left).setVisibility(View.VISIBLE);
+            convertView.findViewById(R.id.message).setBackgroundResource(R.drawable.right_bubble);
+
+            //convertView.findViewById(R.id.nameTextView).
+        } else {
+            messageLayout.setGravity(Gravity.START);
+            convertView.findViewById(R.id.spacer_right).setVisibility(View.VISIBLE);
+            convertView.findViewById(R.id.message).setBackgroundResource(R.drawable.left_bubble);
+
+        }
     }
 
     private void image(String path, StorageReference ref, File file, ImageView photoImageView,
@@ -128,9 +149,8 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
         Helper.saveFile(getContext(), path, ref, file);
         Glide.with(photoImageView.getContext())
                 .load(file)
-                .thumbnail(1)
+                .thumbnail(1/10)
                 .into(photoImageView);
-        messageTextView.setVisibility(View.GONE);
         photoImageView.setVisibility(View.VISIBLE);
     }
 
@@ -140,12 +160,14 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
         Glide
                 .with(photoImageView.getContext())
                 .load(file)
-                .thumbnail(1)
+                .thumbnail(1/10)
                 .into(photoImageView);
 
-        messageTextView.setVisibility(View.GONE);
         photoImageView.setVisibility(View.VISIBLE);
     }
 }
 
 //TODO: play videos and gifs
+//TODO: improve message layout
+//TODO: receive files
+//TODO: show name if is group
