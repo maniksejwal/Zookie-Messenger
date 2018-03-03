@@ -29,7 +29,7 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
-import com.zookiemessenger.zookiemessenger.ChatDetails;
+import com.zookiemessenger.zookiemessenger.FilesScreen;
 import com.zookiemessenger.zookiemessenger.Helper;
 import com.zookiemessenger.zookiemessenger.R;
 import com.zookiemessenger.zookiemessenger.poll.PollActivity;
@@ -44,6 +44,7 @@ import java.util.List;
 import timber.log.Timber;
 
 import static com.zookiemessenger.zookiemessenger.Helper.MESSAGES;
+import static com.zookiemessenger.zookiemessenger.Helper.TAGS;
 
 /**
  * Created by manik on 24/12/17.
@@ -192,7 +193,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
 
         //Add meta
         mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
-                "/" + getString(R.string.type)).setValue(getString(R.string.group));
+                "/" + Helper.TYPE).setValue(getString(R.string.group));
 
         mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
                 "/" + getString(R.string.admin)).push().setValue(mUserPhoneNumber);
@@ -299,7 +300,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
             @Override
             public void onClick(View view) {
                 FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString()
-                        , mUserPhoneNumber, "text", null, null);
+                        , mUserPhoneNumber, "text", null, null, null);
                 mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
                 // Clear input box
                 mMessageEditText.setText("");
@@ -437,13 +438,14 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_files:
-                Intent intent1 = new Intent(this, ChatDetails.class);
+                Intent intent1 = new Intent(this, FilesScreen.class);
+                intent1.putExtra(Helper.CHATKEY, mChatKey);
                 startActivity(intent1);
                 break;
             case NEW_POLL_ID:
                 Intent intent2 = new Intent(this, PollActivity.class);
                 intent2.putExtra("newPoll", true);
-                intent2.putExtra("chatKey", mChatKey);
+                intent2.putExtra(Helper.CHATKEY, mChatKey);
                 startActivity(intent2);
         }
         return super.onOptionsItemSelected(item);
@@ -489,7 +491,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                 List<String> tagList = Arrays.asList(data.getStringArrayExtra(getString(R.string.tag_list)));
                 int oldRequestCode = data.getIntExtra(Helper.REQUEST_CODE, -1);
                 //mFileRef.updateMetadata(new StorageMetadata.Builder().setCustomMetadata(Helper.TAGS,
-                  //      String.valueOf(tagList)).build());
+                //      String.valueOf(tagList)).build());
                 uploadFile(tagList, oldRequestCode);
 
 
@@ -519,81 +521,53 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
         startActivityForResult(intent, RC_TAGS);
     }
 
-    private void uploadFile(final List<String> tagList, int requestCode) {
+    private void uploadFile(final List<String> tagList, final int requestCode) {
         Timber.v("uploadFile() entered");
         Timber.v("requestCode " + requestCode);
         Timber.v("graphic path " + mTempGraphicPath);
-        switch (requestCode) {
-            case RC_GRAPHIC_PICKER:
-                Timber.v("mFileRef " + mFileRef);
-                mFileRef.putFile(mSelectedFileUri)
-                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
-                                Timber.v("downloadUrl " + downloadUrl);
-                                FriendlyMessage friendlyMessage = new FriendlyMessage(null,
-                                        mUserPhoneNumber, Helper.GRAPHIC, downloadUrl.toString(),
-                                        tagList);
-                                Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
-                                        .push().setValue(friendlyMessage);
-                                //Toast.makeText(getApplicationContext(), "Done", Toast.LENGTH_SHORT).show();
-                                //finish();
-                            }
-                        });
-                break;
-            case RC_FILE_PICKER:
-                mFileRef.putFile(mSelectedFileUri)
-                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                // When the image has successfully uploaded, we get its download URL
-                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
 
-                                // Set the download URL to the message box, so that the user can send it to the database
-                                FriendlyMessage friendlyMessage = new FriendlyMessage(null,
-                                        mUserPhoneNumber, Helper.FILE, downloadUrl.toString(),
-                                        tagList);
-                                Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
-                                        .push().setValue(friendlyMessage);
-                            }
-                        });
-                break;
-            case RC_IMAGE_CAPTURE:
-                mFileRef.putFile(mSelectedFileUri)
-                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                // When the image has successfully uploaded, we get its download URL
-                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
+        Timber.v("mFileRef " + mFileRef);
+        mFileRef.putFile(mSelectedFileUri)
+                .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                        Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                        Timber.v("downloadUrl " + downloadUrl);
+                        FriendlyMessage friendlyMessage;
+                        switch (requestCode) {
+                            case RC_GRAPHIC_PICKER:
+                                friendlyMessage = new FriendlyMessage(null,
+                                        mUserPhoneNumber, Helper.FILE, Helper.GRAPHIC,
+                                        downloadUrl.toString(), tagList);
+                                break;
+                            case RC_FILE_PICKER:
+                                friendlyMessage = new FriendlyMessage(null,
+                                        mUserPhoneNumber, Helper.FILE, Helper.FILE,
+                                        downloadUrl.toString(), tagList);
+                                break;
+                            case RC_IMAGE_CAPTURE:
+                                friendlyMessage = new FriendlyMessage(null,
+                                        mUserPhoneNumber, Helper.FILE, Helper.IMAGE,
+                                        downloadUrl.toString(), tagList);
+                                break;
+                            case RC_VIDEO_CAPTURE:
+                                friendlyMessage = new FriendlyMessage(null,
+                                        mUserPhoneNumber, Helper.FILE, Helper.VIDEO,
+                                        downloadUrl.toString(), tagList);
+                                break;
+                            default:
+                                throw new RuntimeException("Wrong request code. The request code for this file type is not defined");
+                        }
+                        Timber.v("mChatKey " + mChatKey);
+                        String messageKey = mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
+                                .push().getKey();
+                        mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES + "/" + messageKey)
+                                .setValue(friendlyMessage);
+                        addTag(tagList, messageKey);
+                        //Toast.makeText(getApplicationContext(), "Done", Toast.LENGTH_SHORT).show();
+                        //finish();
+                    }
+                });
 
-                                // Set the download URL to the message box, so that the user can send it to the database
-                                FriendlyMessage friendlyMessage = new FriendlyMessage(null,
-                                        mUserPhoneNumber, Helper.IMAGE, downloadUrl.toString(),
-                                        tagList);
-                                Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
-                                        .push().setValue(friendlyMessage);
-                            }
-                        });
-                break;
-            case RC_VIDEO_CAPTURE:
-                mFileRef.putFile(mSelectedFileUri)
-                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                Timber.v("video uploaded");
-                                // When the image has successfully uploaded, we get its download URL
-                                Uri downloadUrl = taskSnapshot.getDownloadUrl();
-
-                                // Set the download URL to the message box, so that the user can send it to the database
-                                FriendlyMessage friendlyMessage = new FriendlyMessage(null,
-                                        mUserPhoneNumber, "image", downloadUrl.toString(),
-                                        tagList);
-                                Timber.v("mChatKey " + mChatKey);
-                                mChatsDatabaseReference.child(mChatKey + "/" + MESSAGES)
-                                        .push().setValue(friendlyMessage);
-                            }
-                        });
-                break;
 
             /*case RC_CONTACT:
                 if (resultCode != RESULT_OK) return;
@@ -612,8 +586,35 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                             }
                         });
                 break;*/
-        }
+    }
 
+
+    private void addTag(final List<String> tagList, final String messageKey) {
+        mChatsDatabaseReference.child(mChatKey + "/" + TAGS).addListenerForSingleValueEvent(
+                new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        for (String tag : tagList) {
+                            boolean tagFound = false;
+                            for (DataSnapshot child : dataSnapshot.getChildren()) {
+                                if (child.getValue().toString().equals(tag)) {
+                                    tagFound = true;
+                                    break;
+                                }
+                            }
+                            Timber.v("tagFound " + tagFound);
+                            if (!tagFound) mChatsDatabaseReference.child(mChatKey + "/" + TAGS)
+                                    .push().setValue(tag);
+                            mChatsDatabaseReference.child(mChatKey + "/" + TAGS + "/" + tag)
+                                    .push().setValue(messageKey);
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
     }
 
     private String getFileName(Uri uri) {

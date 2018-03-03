@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="com.zookiemessenger.zookiemessenger.ChatDetails">
+    tools:context="com.zookiemessenger.zookiemessenger.FilesScreen">
 
     <android.support.v4.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -26,7 +26,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="8dp"
-                    android:hint="@string/enter_tag" />
+                    android:hint="@string/enter_tag"
+                    android:imeOptions="actionSearch" />
 
             </LinearLayout>
 
@@ -36,22 +37,39 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="8dp" />
 
-            <EditText
-                android:id="@+id/file_name_edit_text"
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/search_tag_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:hint="@string/enter_name" />
+                android:orientation="horizontal" />
+            <!--
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                />
+
+                        </HorizontalScrollView>
+            -->
+            <!--            <EditText
+                            android:id="@+id/file_name_edit_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_margin="8dp"
+                            android:hint="@string/enter_name" />-->
 
             <GridView
+                android:id="@+id/files_grid"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:id="@+id/files_grid"
-                android:horizontalSpacing="4dp"
-                android:verticalSpacing="4dp"
                 android:layout_margin="8dp"
+                android:horizontalSpacing="4dp"
                 android:numColumns="4"
-                />
+                android:verticalSpacing="4dp" />
 
         </LinearLayout>
 

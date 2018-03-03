@@ -87,35 +87,41 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
                 });
 
                 break;
-            case Helper.GRAPHIC:
-                //gif
-                if (name.endsWith(".gif")) gif(path, ref, file, photoImageView, messageTextView);
-                    //Video
-                else if (name.endsWith(".mp4") || name.endsWith(".avi") || name.endsWith(".flv") ||
-                        name.endsWith(".wmv") || name.endsWith(".mov") || name.endsWith(".mpg")) {
-                    Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
-                    videoVideoView.setVisibility(View.VISIBLE);
-                }
-                //Image
-                else image(path, ref, file, photoImageView, messageTextView);
-
-                break;
-            case Helper.IMAGE:
-                image(path, ref, file, photoImageView, messageTextView);
-
-                break;
-            case Helper.VIDEO:
-                Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
-                videoVideoView.setVisibility(View.VISIBLE);
-
-                break;
             case Helper.FILE:
-                Helper.saveFile(getContext(), path, ref, file);
-                Glide.with(photoImageView.getContext())
-                        .load(file)
-                        .thumbnail(1/10)
-                        .into(photoImageView);
-                photoImageView.setVisibility(View.VISIBLE);
+                String fileType = message.getFileType();
+                switch (fileType) {
+                    case Helper.GRAPHIC:
+                        //gif
+                        if (name.endsWith(".gif"))
+                            gif(path, ref, file, photoImageView, messageTextView);
+                            //Video
+                        else if (name.endsWith(".mp4") || name.endsWith(".avi") ||
+                                name.endsWith(".flv") || name.endsWith(".wmv") ||
+                                name.endsWith(".mov") || name.endsWith(".mpg")) {
+                            Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
+                            videoVideoView.setVisibility(View.VISIBLE);
+                        }
+                        //Image
+                        else image(path, ref, file, photoImageView, messageTextView);
+
+                        break;
+                    case Helper.IMAGE:
+                        image(path, ref, file, photoImageView, messageTextView);
+
+                        break;
+                    case Helper.VIDEO:
+                        Helper.saveVideo(getContext(), path, ref, file, videoVideoView);
+                        videoVideoView.setVisibility(View.VISIBLE);
+
+                        break;
+                    case Helper.FILE:
+                        Helper.saveFile(getContext(), path, ref, file);
+                        Glide.with(photoImageView.getContext())
+                                .load(file)
+                                .thumbnail(1 / 10)
+                                .into(photoImageView);
+                        photoImageView.setVisibility(View.VISIBLE);
+                }
 
                 break;
             default:

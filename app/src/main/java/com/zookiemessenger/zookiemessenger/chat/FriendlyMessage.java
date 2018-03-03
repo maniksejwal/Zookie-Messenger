@@ -12,21 +12,27 @@ public class FriendlyMessage {
     private String userPhoneNumber;
     private String url;
     private String type;
+    private String fileType;
     private List<String> tags;
 
     public FriendlyMessage() {
     }
 
-    public FriendlyMessage(String text, String user, String type, String url, List<String> tags) {
+    public FriendlyMessage(String text, String user, String type, String fileType, String url, List<String> tags) {
         this.text = text;
         this.userPhoneNumber = user;
         this.url = url;
         this.type = type;
         this.tags = tags;
+        this.fileType = fileType;
     }
 
     public String getType() {
         return type;
+    }
+
+    public String getFileType() {
+        return fileType;
     }
 
     public String getText() {

@@ -30,7 +30,7 @@
         <activity android:name=".Chats" />
 
         <activity android:name=".chat.ChatScreen" />
-        <activity android:name=".ChatDetails" />
+        <activity android:name=".FilesScreen" />
         <activity android:name=".chat.TagsActivity" />
         <activity android:name=".poll.PollActivity" />
 

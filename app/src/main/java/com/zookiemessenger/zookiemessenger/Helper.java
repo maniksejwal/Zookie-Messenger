@@ -34,6 +34,11 @@ public class Helper {
     public static final String FILE = "file";
     public static final String MESSAGES = "messages";
     public static final String TAGS = "tags";
+    public static final String CHATKEY = "chatKey";
+    public static final String TYPE = "type";
+    public static final String URL = "url";
+
+    //Todo: use capital first letter or fix FilesScreen type_spinner content
 
     //App Constants
     public static final String REQUEST_CODE = "requestCode";

@@ -248,7 +248,7 @@ public class PollActivity extends AppCompatActivity {
                         detailsEditText));
                 mChatDatabaseReference.child(getString(R.string.messages)).push().setValue(new FriendlyMessage(
                         titleEditText.getText().toString(), mUserPhoneNumber,
-                        "poll", mPollKey, null));
+                        "poll", null, mPollKey, null));
                 castVote();
             } else {
                 //add all the new options
