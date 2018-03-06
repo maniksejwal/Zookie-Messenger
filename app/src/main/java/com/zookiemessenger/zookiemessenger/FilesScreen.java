@@ -307,3 +307,5 @@ public class FilesScreen extends AppCompatActivity {
     }
 }
 //TODO: update adapter with files
+//TODO: recent files
+//TODO: search by name

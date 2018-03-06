@@ -35,7 +35,9 @@
                 android:id="@+id/type_spinner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 android:layout_margin="8dp" />
+            <!--TODO: change visibility once useful code is added-->
 
             <android.support.v7.widget.RecyclerView
                 android:id="@+id/search_tag_list"

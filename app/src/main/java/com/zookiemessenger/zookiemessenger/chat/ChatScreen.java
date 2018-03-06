@@ -81,6 +81,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
     private StorageReference mFileRef;
 
     public String mChatKey = null;
+    private ArrayList<ChatListItem> recentChats = new ArrayList<>();
 
     private ChildEventListener mChildEventListener;
 
@@ -139,10 +140,16 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
     private void getMyIntent() {
         Intent intent = getIntent();
         isNewGroup = intent.getBooleanExtra("isNewGroup", false);
-        mType = intent.getStringExtra("type");
+        //mType = intent.getStringExtra("type");
         mGroupMemberList = intent.getStringArrayListExtra("memberList");
-        mContactKey = intent.getStringExtra(getString(R.string.contact_key));
-        mContactName = intent.getStringExtra("contactName");
+        //mContactKey = intent.getStringExtra(getString(R.string.contact_key));
+        //mContactName = intent.getStringExtra("contactName");
+        ChatListItem chat = intent.getParcelableExtra("chat");
+        mType = chat.getType();
+        mContactKey = chat.getPhoneNumber();
+        mContactName = chat.getName();
+        recentChats = intent.getParcelableExtra("recentChats");
+        recentChats.add(chat);
     }
 
     private void getChatKey() {
@@ -304,6 +311,16 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                 mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
                 // Clear input box
                 mMessageEditText.setText("");
+            }
+        });
+
+        findViewById(R.id.recent_chat_FAB).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
+                intent.putExtra("chat", recentChats.get(recentChats.size() - 2));
+                intent.putExtra("recentChats", recentChats);
+                startActivity(intent);
             }
         });
 

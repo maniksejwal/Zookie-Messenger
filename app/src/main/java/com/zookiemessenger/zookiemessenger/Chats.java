@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
@@ -25,6 +26,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.zookiemessenger.zookiemessenger.chat.ChatListItem;
 import com.zookiemessenger.zookiemessenger.chat.ChatScreen;
 import com.zookiemessenger.zookiemessenger.contacts.ContactContract.ContactEntry;
 import com.zookiemessenger.zookiemessenger.contacts.ContactsActivity;
@@ -48,7 +50,8 @@ public class Chats extends AppCompatActivity {
     DatabaseReference mUserDatabaseReference;
     private DatabaseReference mChatsDatabaseReference;
 
-    ArrayList<Chat> mChatList = new ArrayList<>();
+    ArrayList<ChatListItem> mChatList = new ArrayList<>();
+    private ArrayList<ChatListItem> recentChats = new ArrayList<>();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -86,10 +89,19 @@ public class Chats extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
                 Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
-                intent.putExtra(getString(R.string.contact_key), mChatList.get(position).phoneNumber);
-                intent.putExtra(getString(R.string.type), mChatList.get(position).type);
-                intent.putExtra("contactName", mChatList.get(position).name);
+                //intent.putExtra(getString(R.string.contact_key), mChatList.get(position).getPhoneNumber());
+                //intent.putExtra(getString(R.string.type), mChatList.get(position).getType());
+                //intent.putExtra("contactName", mChatList.get(position).getName());
+                intent.putExtra("chat", (Parcelable) mChatList.get(position));
+                intent.putExtra("recentChats", recentChats);
                 startActivity(intent);
+                for (int i = 0; i < recentChats.size(); i++) {
+                    if (recentChats.get(i) == mChatList.get(position)) {
+                        recentChats.remove(i);
+                        break;
+                    }
+                    recentChats.add(mChatList.get(position));
+                }
             }
         });
         setTitle(mFirebaseUser.getDisplayName());
@@ -130,12 +142,12 @@ public class Chats extends AppCompatActivity {
     }
 
     private void addChat(DataSnapshot childSnapshot, DataSnapshot type) {
-        final Chat chat = new Chat(childSnapshot.getKey(),
+        final ChatListItem chat = new ChatListItem(childSnapshot.getKey(),
                 childSnapshot.getValue() + "", "" + type.getValue());
-        if (!chat.type.equals(getString(R.string.group))) {
-            Timber.v("phoneNumber " + chat.phoneNumber);
-            Timber.v("type " + chat.type);
-            String st = ContactEntry.COLUMN_CONTACT_PHONE_NUMBER + "='" + chat.phoneNumber + "'";
+        if (!chat.getType().equals(getString(R.string.group))) {
+            Timber.v("phoneNumber " + chat.getPhoneNumber());
+            Timber.v("type " + chat.getType());
+            String st = ContactEntry.COLUMN_CONTACT_PHONE_NUMBER + "='" + chat.getPhoneNumber() + "'";
             Timber.v("selection " + st);
             Cursor c = getContentResolver().query(ContactEntry.CONTENT_URI,
                     new String[]{
@@ -176,8 +188,8 @@ public class Chats extends AppCompatActivity {
         }
     }
 
-    private void updateAdapter(String name, Chat chat) {
-        chat.name = name;
+    private void updateAdapter(String name, ChatListItem chat) {
+        chat.setName(name);
         mChatList.add(chat);
 
         runOnUiThread(new Runnable() {
@@ -222,9 +234,9 @@ public class Chats extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private class ChatAdapter extends ArrayAdapter<Chat> {
+    private class ChatAdapter extends ArrayAdapter<ChatListItem> {
 
-        ChatAdapter(@NonNull Context context, ArrayList<Chat> chats) {
+        ChatAdapter(@NonNull Context context, ArrayList<ChatListItem> chats) {
             super(context, 0, chats);
             Timber.v("ContactAdapter created");
         }
@@ -237,8 +249,9 @@ public class Chats extends AppCompatActivity {
                         , parent, false);
             }
 
-            ((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).name);
-            ((TextView) listItemView.findViewById(R.id.phone_number)).setText(getItem(position).phoneNumber);
+            ((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).getName());
+            ((TextView) listItemView.findViewById(R.id.phone_number))
+                    .setText(getItem(position).getPhoneNumber());
             /*ImageView img = listItemView.findViewById(R.id.image);
             Picasso
                     .with(getApplicationContext())
@@ -251,19 +264,6 @@ public class Chats extends AppCompatActivity {
                     */
 
             return listItemView;
-        }
-    }
-
-    private class Chat {
-        String phoneNumber;
-        String chatID;
-        String type;
-        String name;
-
-        Chat(String phone, String chat, String type) {
-            phoneNumber = phone;
-            chatID = chat;
-            this.type = type;
         }
     }
 }
