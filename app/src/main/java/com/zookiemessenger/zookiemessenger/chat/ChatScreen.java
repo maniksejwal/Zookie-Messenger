@@ -145,10 +145,12 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
         //mContactKey = intent.getStringExtra(getString(R.string.contact_key));
         //mContactName = intent.getStringExtra("contactName");
         ChatListItem chat = intent.getParcelableExtra("chat");
+        Timber.d("" + chat);
+        if (chat == null) return;
         mType = chat.getType();
         mContactKey = chat.getPhoneNumber();
         mContactName = chat.getName();
-        recentChats = intent.getParcelableExtra("recentChats");
+        recentChats = intent.getParcelableArrayListExtra("recentChats");
         recentChats.add(chat);
     }
 
@@ -314,15 +316,17 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
             }
         });
 
-        findViewById(R.id.recent_chat_FAB).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
-                intent.putExtra("chat", recentChats.get(recentChats.size() - 2));
-                intent.putExtra("recentChats", recentChats);
-                startActivity(intent);
-            }
-        });
+        if (recentChats.size() < 2)findViewById(R.id.recent_chat_FAB).setVisibility(View.GONE);
+
+            findViewById(R.id.recent_chat_FAB).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
+                    intent.putExtra("chat", recentChats.get(recentChats.size() - 2));
+                    intent.putExtra("recentChats", recentChats);
+                    startActivity(intent);
+                }
+            });
 
         attachFileClickListeners();
     }
@@ -661,4 +665,5 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
 //TODO: delete messages
 //TODO: add message layout
 //TODO: receive videos
+//TODO: fix recent chat
 //TODO: send docs, locations, etc

@@ -43,10 +43,8 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        if (convertView == null) {
-            convertView = ((Activity) getContext()).getLayoutInflater().inflate(R.layout.item_message,
-                    parent, false);
-        }
+        if (convertView == null) convertView = ((Activity) getContext()).getLayoutInflater()
+                .inflate(R.layout.item_message, parent, false);
 
         ImageView photoImageView = convertView.findViewById(R.id.photo_view);
         VideoView videoVideoView = convertView.findViewById(R.id.video_view);
@@ -69,6 +67,8 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
             name = ref.getName();
             file = new File(path + File.separator + name);
         }
+
+        Timber.v("Selecting message type");
 
         switch (type) {
             case Helper.POLL:
@@ -134,6 +134,7 @@ public class MessageAdapter extends ArrayAdapter<FriendlyMessage> {
     }
 
     private void setSender(FriendlyMessage message, TextView authorTextView, View convertView){
+        Timber.v("Entered setSender()");
         authorTextView.setText(message.getName());
         LinearLayout messageLayout = convertView.findViewById(R.id.message);
         if (message.getName().equals(mUserPhoneNumber)) {

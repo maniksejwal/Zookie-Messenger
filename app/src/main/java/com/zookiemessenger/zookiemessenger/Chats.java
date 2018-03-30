@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
@@ -92,7 +91,7 @@ public class Chats extends AppCompatActivity {
                 //intent.putExtra(getString(R.string.contact_key), mChatList.get(position).getPhoneNumber());
                 //intent.putExtra(getString(R.string.type), mChatList.get(position).getType());
                 //intent.putExtra("contactName", mChatList.get(position).getName());
-                intent.putExtra("chat", (Parcelable) mChatList.get(position));
+                intent.putExtra("chat", mChatList.get(position));
                 intent.putExtra("recentChats", recentChats);
                 startActivity(intent);
                 for (int i = 0; i < recentChats.size(); i++) {
