@@ -43,6 +43,7 @@ import java.util.List;
 
 import timber.log.Timber;
 
+import static com.zookiemessenger.zookiemessenger.Helper.MEMBERS;
 import static com.zookiemessenger.zookiemessenger.Helper.MESSAGES;
 import static com.zookiemessenger.zookiemessenger.Helper.TAGS;
 
@@ -50,7 +51,7 @@ import static com.zookiemessenger.zookiemessenger.Helper.TAGS;
  * Created by manik on 24/12/17.
  */
 
-public class ChatScreen extends AppCompatActivity implements Serializable {
+public class ChatScreen extends AppCompatActivity implements Serializable, View.OnClickListener {
     //public static final int RC_SIGN_IN = 1;
     private static final int RC_FILE_PICKER = 1;
     private static final int RC_GRAPHIC_PICKER = 2;
@@ -95,7 +96,6 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
     private static final String FILE_PROVIDER_AUTHORITY = "com.zookiemessenger.zookiemessenger.fileprovider";
 
     private Uri mSelectedFileUri;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -217,12 +217,17 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
         mChatKey = mChatsDatabaseReference.push().getKey();
         Timber.v("mChatKey: " + mChatKey);
 
+        //send it to the users
         mUserDatabaseReference.child(
                 mContactKey + "/" + getString(R.string.chats) + "/" + mUserPhoneNumber)
                 .setValue(mChatKey);
         mUserDatabaseReference.child(
                 mUserPhoneNumber + "/" + getString(R.string.chats) + "/" + mContactKey)
                 .setValue(mChatKey);
+
+        //add users to the chat
+        mChatsDatabaseReference.child(mChatKey + "/" + MEMBERS).push().setValue(mContactKey);
+        mChatsDatabaseReference.child(mChatKey + "/" + MEMBERS).push().setValue(mUserPhoneNumber);
 
         mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
                 "/" + getString(R.string.type)).setValue("normal");
@@ -305,138 +310,23 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
         //mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(DEFAULT_MSG_LENGTH_LIMIT)});
 
         // Send button sends a message and clears the EditText
-        mSendButton.setOnClickListener(new View.OnClickListener() {
+        mSendButton.setOnClickListener(this);
+        findViewById(R.id.share_image).setOnClickListener(this);
+        findViewById(R.id.share_file).setOnClickListener(this);
+        findViewById(R.id.share_new_pic).setOnClickListener(this);
+        findViewById(R.id.share_new_video).setOnClickListener(this);
+
+        if (recentChats.size() < 2) findViewById(R.id.recent_chat_FAB).setVisibility(View.GONE);
+
+        findViewById(R.id.recent_chat_FAB).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString()
-                        , mUserPhoneNumber, "text", null, null, null);
-                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
-                // Clear input box
-                mMessageEditText.setText("");
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
+                intent.putExtra("chat", recentChats.get(recentChats.size() - 2));
+                intent.putExtra("recentChats", recentChats);
+                startActivity(intent);
             }
         });
-
-        if (recentChats.size() < 2)findViewById(R.id.recent_chat_FAB).setVisibility(View.GONE);
-
-            findViewById(R.id.recent_chat_FAB).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
-                    intent.putExtra("chat", recentChats.get(recentChats.size() - 2));
-                    intent.putExtra("recentChats", recentChats);
-                    startActivity(intent);
-                }
-            });
-
-        attachFileClickListeners();
-    }
-
-    private void attachFileClickListeners() {
-        findViewById(R.id.share_image).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("image/*, video/*");
-                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                startActivityForResult(Intent.createChooser(intent,
-                        "Complete action using"), RC_GRAPHIC_PICKER);
-            }
-        });
-
-        /*
-        findViewById(R.id.share_audio).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("audio/.mp3");
-                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                startActivityForResult(Intent.createChooser(intent,
-                        "Complete action using"), RC_AUDIO_PICKER);
-            }
-        });
-
-        findViewById(R.id.share_document).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("application/.pdf, text/*");
-                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                startActivityForResult(Intent.createChooser(intent,
-                        "Complete action using"), RC_DOCUMENT_PICKER);
-            }
-        });*/
-
-        findViewById(R.id.share_file).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                if (intent.resolveActivity(getPackageManager()) != null)
-                    startActivityForResult(Intent.createChooser(intent,
-                            "Complete action using"), RC_FILE_PICKER);
-            }
-        });
-
-        findViewById(R.id.share_new_pic).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                File photoFile = null;
-                try {
-                    photoFile = GraphicUtils.createTempImageFile(getApplicationContext());
-                } catch (IOException e) {
-                    // Error occurred while creating the File
-                    e.printStackTrace();
-                }
-                if (photoFile == null) return;
-                // Get the path of the temporary file
-                mTempGraphicPath = photoFile.getAbsolutePath();
-                // Get the content URI for the image file
-                Uri photoURI = FileProvider.getUriForFile(getApplicationContext(),
-                        FILE_PROVIDER_AUTHORITY, photoFile);
-                // Add the URI so the camera can store the image
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                // Launch the camera activity
-                startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_IMAGE_CAPTURE);
-            }
-        });
-
-        findViewById(R.id.share_new_video).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-                File videoFile = null;
-                try {
-                    videoFile = GraphicUtils.createTempVideoFile(getApplicationContext());
-                } catch (IOException e) {
-                    // Error occurred while creating the File
-                    e.printStackTrace();
-                }
-                if (videoFile == null) return;
-                // Get the path of the temporary file
-                mTempGraphicPath = videoFile.getAbsolutePath();
-                // Get the content URI for the image file
-                Uri videoURI = FileProvider.getUriForFile(getApplicationContext(),
-                        FILE_PROVIDER_AUTHORITY, videoFile);
-                // Add the URI so the camera can store the image
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, videoURI);
-                // Launch the camera activity
-                startActivityForResult(Intent.createChooser(intent, "Complete action using"),
-                        RC_VIDEO_CAPTURE);
-            }
-        });
-
-        /*
-        findViewById(R.id.share_contact).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_PICK);
-                intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
-                startActivityForResult(Intent.createChooser(intent, "Complete action using")
-                        , RC_CONTACT);
-            }
-        });*/
     }
 
 
@@ -470,6 +360,99 @@ public class ChatScreen extends AppCompatActivity implements Serializable {
                 startActivity(intent2);
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onClick(View v) {
+        Intent intent;
+        switch (v.getId()) {
+            case R.id.sendButton:
+                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString()
+                        , mUserPhoneNumber, "text", null, null, null);
+                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
+                // Clear input box
+                mMessageEditText.setText("");
+                break;
+            case R.id.share_image:
+                intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*, video/*");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent,
+                        "Complete action using"), RC_GRAPHIC_PICKER);
+                break;
+            case R.id.share_file:
+                intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                if (intent.resolveActivity(getPackageManager()) != null)
+                    startActivityForResult(Intent.createChooser(intent,
+                            "Complete action using"), RC_FILE_PICKER);
+                break;
+            case R.id.share_new_pic:
+                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                File photoFile = null;
+                try {
+                    photoFile = GraphicUtils.createTempImageFile(getApplicationContext());
+                } catch (IOException e) {
+                    // Error occurred while creating the File
+                    e.printStackTrace();
+                }
+                if (photoFile == null) return;
+                // Get the path of the temporary file
+                mTempGraphicPath = photoFile.getAbsolutePath();
+                // Get the content URI for the image file
+                Uri photoURI = FileProvider.getUriForFile(getApplicationContext(),
+                        FILE_PROVIDER_AUTHORITY, photoFile);
+                // Add the URI so the camera can store the image
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                // Launch the camera activity
+                startActivityForResult(Intent.createChooser(intent, "Complete action using"),
+                        RC_IMAGE_CAPTURE);
+                break;
+            case R.id.share_new_video:
+                intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+                File videoFile = null;
+                try {
+                    videoFile = GraphicUtils.createTempVideoFile(getApplicationContext());
+                } catch (IOException e) {
+                    // Error occurred while creating the File
+                    e.printStackTrace();
+                }
+                if (videoFile == null) return;
+                // Get the path of the temporary file
+                mTempGraphicPath = videoFile.getAbsolutePath();
+                // Get the content URI for the image file
+                Uri videoURI = FileProvider.getUriForFile(getApplicationContext(),
+                        FILE_PROVIDER_AUTHORITY, videoFile);
+                // Add the URI so the camera can store the image
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, videoURI);
+                // Launch the camera activity
+                startActivityForResult(Intent.createChooser(intent, "Complete action using"),
+                        RC_VIDEO_CAPTURE);
+                break;
+            /*
+            case R.id.share_audio:
+                intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("audio/.mp3");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent,
+                        "Complete action using"), RC_AUDIO_PICKER);
+                break;
+            case R.id.share_document:
+                intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("application/.pdf, text/*");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent,
+                        "Complete action using"), RC_DOCUMENT_PICKER);
+                break;
+            case R.id.share_contact:
+                intent = new Intent(Intent.ACTION_PICK);
+                intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
+                startActivityForResult(Intent.createChooser(intent, "Complete action using")
+                        , RC_CONTACT);
+                break;
+            */
+        }
     }
 
     @Override

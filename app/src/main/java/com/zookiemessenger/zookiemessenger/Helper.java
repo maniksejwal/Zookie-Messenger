@@ -33,6 +33,7 @@ public class Helper {
     public static final String POLL = "poll";
     public static final String FILE = "file";
     public static final String MESSAGES = "messages";
+    public static final String MEMBERS = "members";
     public static final String TAGS = "tags";
     public static final String CHATKEY = "chatKey";
     public static final String TYPE = "type";
