@@ -233,10 +233,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     // [END on_start_check_user]
 
-
     @Override
-    protected void onStop() {
-        super.onStop();
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.button_start_verification:
+                if (!validatePhoneNumber()) return;
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                startPhoneNumberVerification(mPhoneNumberField.getText().toString());
+                break;
+            case R.id.button_verify_phone:
+                String code = mVerificationField.getText().toString();
+                if (TextUtils.isEmpty(code)) {
+                    mVerificationField.setError("Cannot be empty.");
+                    return;
+                }
+                verifyPhoneNumberWithCode(mVerificationId, code);
+                break;
+            case R.id.button_resend:
+                resendVerificationCode(mPhoneNumberField.getText().toString(), mResendToken);
+                break;
+            case R.id.sign_out_button:
+                signOut();
+                break;
+        }
     }
 
     @Override
@@ -489,31 +509,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    @Override
-    public void onClick(View view) {
-        switch (view.getId()) {
-            case R.id.button_start_verification:
-                if (!validatePhoneNumber()) return;
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                startPhoneNumberVerification(mPhoneNumberField.getText().toString());
-                break;
-            case R.id.button_verify_phone:
-                String code = mVerificationField.getText().toString();
-                if (TextUtils.isEmpty(code)) {
-                    mVerificationField.setError("Cannot be empty.");
-                    return;
-                }
-                verifyPhoneNumberWithCode(mVerificationId, code);
-                break;
-            case R.id.button_resend:
-                resendVerificationCode(mPhoneNumberField.getText().toString(), mResendToken);
-                break;
-            case R.id.sign_out_button:
-                signOut();
-                break;
-        }
-    }
 }
 
 //TODO: handle failed network
