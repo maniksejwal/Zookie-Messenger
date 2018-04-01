@@ -12,7 +12,9 @@ import android.support.v4.app.NotificationCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import com.zookiemessenger.zookiemessenger.Helper;
 import com.zookiemessenger.zookiemessenger.MainActivity;
+import com.zookiemessenger.zookiemessenger.chat.FriendlyMessage;
 
 import java.util.Map;
 
@@ -71,9 +73,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         // Create the pending intent to launch the activity
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent,
                 PendingIntent.FLAG_ONE_SHOT);
 
+        FriendlyMessage friendlyMessage = new FriendlyMessage(
+                data.get(Helper.TEXT),
+                data.get(Helper.SENDER),
+                data.get(Helper.TYPE),
+                data.get(Helper.FILE_TYPE),
+                data.get(Helper.URL),
+                null);                  //TODO: Tags is null do something about it
         //String author = data.get(JSON_KEY_AUTHOR);
         //String message = data.get(JSON_KEY_MESSAGE);
 
@@ -87,7 +96,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
         //        .setSmallIcon(R.drawable.ic_duck)
         //        .setContentTitle(String.format(getString(R.string.notification_message), author))
-        //        .setContentText(message)
+                .setContentText(friendlyMessage.getText())
                 .setAutoCancel(true)
                 .setSound(defaultSoundUri)
                 .setContentIntent(pendingIntent);

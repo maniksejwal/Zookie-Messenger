@@ -45,11 +45,11 @@ public class FriendlyMessage {
 
     public String getName() {
         return userPhoneNumber;
-    }
+    }                 //TODO: rename the method
 
     public void setName(String name) {
         this.userPhoneNumber = name;
-    }
+    }   //TODO: rename the method
 
     public String getUrl() {
         return url;

@@ -1,7 +1,10 @@
 package com.zookiemessenger.zookiemessenger.fcm;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.FirebaseInstanceIdService;
+import com.zookiemessenger.zookiemessenger.Helper;
 
 import timber.log.Timber;
 
@@ -20,6 +23,12 @@ public class MyFirebaseInstanceIDService extends FirebaseInstanceIdService {
         // If you want to send messages to this application instance or
         // manage this apps subscriptions on the server side, send the
         // Instance ID token to your app server.
-        //  sendRegistrationToServer(refreshedToken);
+        sendRegistrationToServer(refreshedToken);
+    }
+
+    private void sendRegistrationToServer(String refreshedToken){
+        FirebaseDatabase.getInstance().getReference().child(Helper.USERS + "/"
+                + FirebaseAuth.getInstance().getCurrentUser().getPhoneNumber()
+                + "/" + Helper.NOTIFICATION_TOKENS).setValue(refreshedToken);
     }
 }

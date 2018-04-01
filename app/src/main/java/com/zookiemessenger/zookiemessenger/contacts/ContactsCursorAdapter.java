@@ -7,9 +7,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CursorAdapter;
 import android.widget.TextView;
-import com.zookiemessenger.zookiemessenger.contacts.ContactContract.ContactEntry;
 
 import com.zookiemessenger.zookiemessenger.R;
+import com.zookiemessenger.zookiemessenger.contacts.ContactContract.ContactEntry;
 
 /**
  * Created by manik on 12/1/18.
@@ -52,6 +52,5 @@ public class ContactsCursorAdapter extends CursorAdapter {
                     //.centerInside()                 // or .centerCrop() to avoid a stretched imageÒ
                     .into(img);
                     */
-
     }
 }

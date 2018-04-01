@@ -13,23 +13,17 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
-import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -37,13 +31,14 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.zookiemessenger.zookiemessenger.Helper;
 import com.zookiemessenger.zookiemessenger.MainActivity;
 import com.zookiemessenger.zookiemessenger.R;
+import com.zookiemessenger.zookiemessenger.chat.ChatListItem;
 import com.zookiemessenger.zookiemessenger.chat.ChatScreen;
 import com.zookiemessenger.zookiemessenger.contacts.ContactContract.ContactEntry;
 
 import java.util.ArrayList;
-import java.util.Map;
 
 import timber.log.Timber;
 
@@ -116,15 +111,19 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
         // Set onClickListener to the list item.
         mListView.setOnItemClickListener(new OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view,
-                                    int position, long id) {
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent intent = new Intent(getApplicationContext(), ChatScreen.class);
                 if (isNewGroup) {
-                    memberList.add(contactList.get(position).phoneNumber);
+                    memberList.add(((TextView) view.findViewById(R.id.phone_number))
+                            .getText().toString());
                     findViewById(R.id.doneFAB).setVisibility(View.VISIBLE);
                 } else {
-                    intent.putExtra("contactName", contactList.get(position).displayName);
-                    intent.putExtra(getString(R.string.contact_key), contactList.get(position).phoneNumber);
+                    //intent.putExtra("contactName", contactList.get(position).displayName);
+                    //intent.putExtra(getString(R.string.contact_key), contactList.get(position).phoneNumber);
+                    intent.putExtra(Helper.CHAT, new ChatListItem(
+                            ((TextView) view.findViewById(R.id.phone_number)).getText().toString(),
+                            ((TextView) view.findViewById(R.id.name)).getText().toString(),
+                            null));
                     startActivity(intent);
                     finish();
                 }
@@ -256,9 +255,8 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
                         Contact contact = new Contact();
                         contact.phoneNumber = finalPhoneNumber;
                         contact.displayName = name;
-                        contact.uid = String.valueOf(dataSnapshot.child("uid").getValue());
-                        Timber.v("contact uid = " + contact.uid);
                         contactList.add(contact);
+
 
                         ContentValues values = new ContentValues();
                         values.put(ContactEntry.COLUMN_CONTACT_NAME, name);
@@ -371,7 +369,7 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
         String displayName, phoneNumber, uid;
     }
 
-    private class ContactAdapter extends ArrayAdapter<Contact> {
+    /*private class ContactAdapter extends ArrayAdapter<Contact> {
 
         ContactAdapter(@NonNull Context context, ArrayList<Contact> contacts) {
             super(context, 0, contacts);
@@ -388,22 +386,22 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
 
             ((TextView) listItemView.findViewById(R.id.name)).setText(getItem(position).displayName);
             ((TextView) listItemView.findViewById(R.id.phone_number)).setText(getItem(position).phoneNumber);
-            /*ImageView img = listItemView.findViewById(R.id.image);
-            Picasso
-                    .with(getApplicationContext())
-                    .load(getItem(position).mImageId)
-                    .placeholder(R.mipmap.launcher_ic)
-                    .fit()
-                    .centerCrop()
+            //ImageView img = listItemView.findViewById(R.id.image);
+            //Picasso
+              //      .with(getApplicationContext())
+                //    .load(getItem(position).mImageId)
+                  //  .placeholder(R.mipmap.launcher_ic)
+                    //.fit()
+                    //.centerCrop()
                     //.centerInside()                 // or .centerCrop() to avoid a stretched imageÒ
-                    .into(img);
-                    */
+                    //.into(img);
+
 
             return listItemView;
         }
-    }
+    }*/
 
-    private class AllOnCompleteListener implements OnCompleteListener<Map<DatabaseReference, DataSnapshot>> {
+    /*private class AllOnCompleteListener implements OnCompleteListener<Map<DatabaseReference, DataSnapshot>> {
         @Override
         public void onComplete(@NonNull Task<Map<DatabaseReference, DataSnapshot>> task) {
             if (task.isSuccessful()) {
@@ -427,10 +425,10 @@ public class ContactsActivity extends AppCompatActivity implements LoaderManager
                 public void run() {
                     pDialog.cancel();
                 }
-            }, 500);*/
+            }, 500);*//*
 
         }
-    }
+    }*/
 }
 
 //TODO: implement name changes

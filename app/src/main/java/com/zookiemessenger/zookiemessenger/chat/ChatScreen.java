@@ -151,6 +151,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable, View.
         mContactKey = chat.getPhoneNumber();
         mContactName = chat.getName();
         recentChats = intent.getParcelableArrayListExtra("recentChats");
+        if (recentChats == null) recentChats = new ArrayList<>();
         recentChats.add(chat);
     }
 
@@ -179,6 +180,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable, View.
     }
 
     private void newGroup() {
+        Timber.v("new Group");
         //make a chat key
         mChatKey = mChatsDatabaseReference.push().getKey();
         Timber.v("mChatKey: " + mChatKey);
@@ -193,19 +195,18 @@ public class ChatScreen extends AppCompatActivity implements Serializable, View.
         mGroupMemberList.add(mUserPhoneNumber);
         //Send chatKey to members
         for (String member : mGroupMemberList)
-            mUserDatabaseReference.child(member + "/" + getString(R.string.chats) +
-                    "/" + mChatKey).setValue(mChatKey);
+            mUserDatabaseReference.child(member + "/" + getString(R.string.chats) + "/" + mChatKey)
+                    .setValue(mChatKey);
 
         //Add members to chat
-        mChatsDatabaseReference.child(mChatKey + "/" + "members")
-                .setValue(mGroupMemberList);
+        mChatsDatabaseReference.child(mChatKey + "/" + MEMBERS).setValue(mGroupMemberList);
 
         //Add meta
-        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
-                "/" + Helper.TYPE).setValue(getString(R.string.group));
+        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) + "/" + Helper.TYPE)
+                .setValue(getString(R.string.group));
 
-        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
-                "/" + getString(R.string.admin)).push().setValue(mUserPhoneNumber);
+        mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) + "/" + getString(R.string.admin))
+                .push().setValue(mUserPhoneNumber);
 
         isAdmin = true;
 
@@ -213,6 +214,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable, View.
     }
 
     private void newPrivateChat() {
+        Timber.v("new private chat");
         //make a chat key
         mChatKey = mChatsDatabaseReference.push().getKey();
         Timber.v("mChatKey: " + mChatKey);
@@ -228,6 +230,7 @@ public class ChatScreen extends AppCompatActivity implements Serializable, View.
         //add users to the chat
         mChatsDatabaseReference.child(mChatKey + "/" + MEMBERS).push().setValue(mContactKey);
         mChatsDatabaseReference.child(mChatKey + "/" + MEMBERS).push().setValue(mUserPhoneNumber);
+        Timber.v("contact key = " + mContactKey);
 
         mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.meta) +
                 "/" + getString(R.string.type)).setValue("normal");
@@ -350,13 +353,13 @@ public class ChatScreen extends AppCompatActivity implements Serializable, View.
         switch (item.getItemId()) {
             case R.id.action_files:
                 Intent intent1 = new Intent(this, FilesScreen.class);
-                intent1.putExtra(Helper.CHATKEY, mChatKey);
+                intent1.putExtra(Helper.CHAT_KEY, mChatKey);
                 startActivity(intent1);
                 break;
             case NEW_POLL_ID:
                 Intent intent2 = new Intent(this, PollActivity.class);
                 intent2.putExtra("newPoll", true);
-                intent2.putExtra(Helper.CHATKEY, mChatKey);
+                intent2.putExtra(Helper.CHAT_KEY, mChatKey);
                 startActivity(intent2);
         }
         return super.onOptionsItemSelected(item);
@@ -369,7 +372,8 @@ public class ChatScreen extends AppCompatActivity implements Serializable, View.
             case R.id.sendButton:
                 FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString()
                         , mUserPhoneNumber, "text", null, null, null);
-                mChatsDatabaseReference.child(mChatKey + "/" + getString(R.string.messages)).push().setValue(friendlyMessage);
+                mChatsDatabaseReference.child(mChatKey + "/" + Helper.MESSAGES)
+                        .push().setValue(friendlyMessage);
                 // Clear input box
                 mMessageEditText.setText("");
                 break;

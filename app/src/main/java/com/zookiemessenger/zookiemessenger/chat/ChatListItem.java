@@ -19,7 +19,7 @@ public class ChatListItem implements Parcelable {
         this.type = type;
     }
 
-    protected ChatListItem(Parcel in) {
+    private ChatListItem(Parcel in) {
         phoneNumber = in.readString();
         chatID = in.readString();
         type = in.readString();

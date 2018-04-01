@@ -32,17 +32,25 @@ public class Helper {
     public static final String GRAPHIC = "graphic";
     public static final String POLL = "poll";
     public static final String FILE = "file";
+    public static final String FILE_TYPE = "fileType";
     public static final String MESSAGES = "messages";
     public static final String MEMBERS = "members";
+    public static final String USERS = "user";
+    public static final String USER = "user";
+    public static final String CHATS = "chats";
     public static final String TAGS = "tags";
-    public static final String CHATKEY = "chatKey";
+    public static final String TEXT = "text";
+    public static final String NOTIFICATION_TOKENS = "notificationTokens";
+    public static final String CHAT_KEY = "chatKey";
     public static final String TYPE = "type";
     public static final String URL = "url";
+    public static final String SENDER = "name";
 
     //Todo: use capital first letter or fix FilesScreen type_spinner content
 
     //App Constants
     public static final String REQUEST_CODE = "requestCode";
+    public static final String CHAT = "chat";
     private static final int REQUEST_STORAGE_ACCESS = 555;
 
     public static final String APP_FOLDER = Environment.getExternalStorageDirectory().toString()
@@ -61,7 +69,6 @@ public class Helper {
         Country(String name, String code) {
             mCode[0] = code;
             mName = name;
-
         }
     }
 

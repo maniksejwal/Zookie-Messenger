@@ -76,7 +76,7 @@ public class FilesScreen extends AppCompatActivity {
 
     private void getMyIntent() {
         Intent intent = getIntent();
-        mChatKey = intent.getStringExtra(Helper.CHATKEY);
+        mChatKey = intent.getStringExtra(Helper.CHAT_KEY);
     }
 
     private void setFirebase() {

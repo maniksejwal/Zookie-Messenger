@@ -91,7 +91,7 @@ public class Chats extends AppCompatActivity {
                 //intent.putExtra(getString(R.string.contact_key), mChatList.get(position).getPhoneNumber());
                 //intent.putExtra(getString(R.string.type), mChatList.get(position).getType());
                 //intent.putExtra("contactName", mChatList.get(position).getName());
-                intent.putExtra("chat", mChatList.get(position));
+                intent.putExtra(Helper.CHAT, mChatList.get(position));
                 intent.putExtra("recentChats", recentChats);
                 startActivity(intent);
                 for (int i = 0; i < recentChats.size(); i++) {
