@@ -33,6 +33,7 @@ import com.google.firebase.auth.PhoneAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.iid.FirebaseInstanceId;
 import com.zookiemessenger.zookiemessenger.contacts.ContactsActivity;
 
 import java.util.HashMap;
@@ -332,6 +333,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                     mUsersDatabaseReference.child(mUser.getPhoneNumber())
                                             .updateChildren(childUpdates);
+
+                                    //Notify the database of about the token
+                                    mUsersDatabaseReference.child(mUser.getPhoneNumber() + "/"
+                                            + Helper.NOTIFICATION_TOKENS).setValue(
+                                            FirebaseInstanceId.getInstance().getToken());
 
                                     mUsersDatabaseReference.child(mUser.getPhoneNumber())
                                             .keepSynced(true);
