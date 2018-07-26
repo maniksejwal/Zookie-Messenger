@@ -1,7 +1,10 @@
 app/build
+app/release
 build
 .idea
 .gradle
 app/google-services.json
 local.properties
 *.iml
+keystore.properties
+resources

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.zookiemessenger.zookiemessenger"
+    package="com.zukimessenger"
     android:versionCode="1"
     android:versionName="1.0">
 
@@ -36,12 +36,12 @@
 
         <provider
             android:name=".contacts.ContactProvider"
-            android:authorities="com.zookiemessenger.zookiemessenger"
+            android:authorities="com.zukimessenger"
             android:exported="false" />
 
         <provider
             android:name="android.support.v4.content.FileProvider"
-            android:authorities="com.zookiemessenger.zookiemessenger.fileprovider"
+            android:authorities="com.zukimessenger.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

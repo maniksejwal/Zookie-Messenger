@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="com.zookiemessenger.zookiemessenger.FilesScreen">
+    tools:context="com.zukimessenger.FilesScreen">
 
     <android.support.v4.widget.NestedScrollView
         android:layout_width="match_parent"

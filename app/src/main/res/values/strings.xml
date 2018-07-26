@@ -1,7 +1,7 @@
 <resources>
     <!--AndroidIM-->
     <string name="hello">Hello</string>
-    <string name="app_name">Zookie</string>
+    <string name="app_name">zuki</string>
     <string name="friend_list">Friend List</string>
     <string name="username">Phone number</string>
     <string name="password">OTP</string>
